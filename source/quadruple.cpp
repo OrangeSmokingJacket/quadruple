@@ -18,9 +18,11 @@ static_assert(std::is_trivially_move_assignable_v<quadruple>);
 constexpr int float_exponent_size = 8;
 constexpr int double_exponent_size = 11;
 
+constexpr uint16_t float_1_filler = 0b0011111110000000;
+constexpr uint16_t double_1_filler = 0b0011110000000000;
+
 template<class T>
-concept Unsigned = requires
-{
+concept Unsigned = requires {
     std::is_unsigned_v<T>;
 };
 
@@ -35,13 +37,28 @@ constexpr size_t bit_size_of(T&& value) noexcept {
 }
 
 template <Unsigned T>
+constexpr T value_sing_mask() noexcept {
+    return T{1} << (sizeof(T) * 8 - 1);
+}
+
+template <Unsigned T>
+constexpr T exponent_sing_mask() noexcept {
+    return T{1} << (sizeof(T) * 8 - 2);
+}
+
+template <Unsigned T>
 constexpr T sign_bits_mask() noexcept {
-    return (T{1} << (sizeof(T) * 8 - 1)) | (T{1} << (sizeof(T) * 8 - 2));
+    return value_sing_mask<T>() | exponent_sing_mask<T>();
 }
 
 template <Unsigned T>
 constexpr void copy_sign_bits(T& dest, T source) noexcept {
     dest |= static_cast<T>(source & sign_bits_mask<T>());
+}
+
+template <Unsigned T>
+constexpr bool is_exponent_sing_bit_set(T value) noexcept {
+    return (value & (T{1} << (sizeof(T) * 8 - 2))) != 0;
 }
 
 template <Unsigned T, Unsigned U>
@@ -55,7 +72,6 @@ constexpr void copy_sign_bits(T& dest, U source) noexcept {
     }
 }
 
-// TODO: proper exponent translation
 // TODO: proper mantissa rounding
 
 quadruple::quadruple(float value) noexcept {
@@ -69,6 +85,9 @@ quadruple::quadruple(float value) noexcept {
     exponent_ >>= bit_size_of(exponent_) - float_exponent_size + 1;
     // place sing bits back
     copy_sign_bits(exponent_, std::bit_cast<uint32_t>(value));
+    if (!is_exponent_sing_bit_set(std::bit_cast<uint32_t>(value))) {
+        exponent_ |= float_1_filler;
+    }
 
     // remove exponent
     flat_value <<= float_exponent_size - 1;
@@ -90,6 +109,9 @@ quadruple::quadruple(double value) noexcept {
     exponent_ >>= bit_size_of(exponent_) - double_exponent_size + 1;
     // place sing bits back
     copy_sign_bits(exponent_, std::bit_cast<uint64_t>(value));
+    if (!is_exponent_sing_bit_set(std::bit_cast<uint64_t>(value))) {
+        exponent_ |= double_1_filler;
+    }
 
     // remove exponent
     flat_value <<= double_exponent_size - 1;
