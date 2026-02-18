@@ -1,22 +1,23 @@
 #include "quadruple.hpp"
 
 #include <bit>
+#include <bitset>
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <type_traits>
 
 static_assert(sizeof(quadruple) == 16);
 static_assert(alignof(quadruple) == 8);
-//static_assert(std::is_trivial_v<quadruple>);
-//static_assert(std::is_trivially_default_constructible_v<quadruple>);
+static_assert(std::is_default_constructible_v<quadruple>);
 static_assert(std::is_trivially_destructible_v<quadruple>);
 static_assert(std::is_trivially_copyable_v<quadruple>);
 static_assert(std::is_trivially_copy_assignable_v<quadruple>);
 static_assert(std::is_trivially_move_constructible_v<quadruple>);
 static_assert(std::is_trivially_move_assignable_v<quadruple>);
 
-constexpr int float_exponent_size = 8;
-constexpr int double_exponent_size = 11;
+constexpr size_t float_exponent_size = 8;
+constexpr size_t double_exponent_size = 11;
 
 constexpr uint16_t float_1_filler = 0b0011111110000000;
 constexpr uint16_t double_1_filler = 0b0011110000000000;
@@ -25,6 +26,9 @@ template<class T>
 concept Unsigned = requires {
     std::is_unsigned_v<T>;
 };
+
+template<class T, size_t N>
+concept ValidBitIndex = sizeof(T) * 8 > N;
 
 template <typename T>
 constexpr size_t bit_size_of() noexcept {
@@ -36,14 +40,19 @@ constexpr size_t bit_size_of(T&& value) noexcept {
     return sizeof(value) * 8;
 }
 
+template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
+constexpr T single_bit_mask() noexcept{
+    return T{1} << (sizeof(T) * 8 - N - 1);
+}
+
 template <Unsigned T>
 constexpr T value_sing_mask() noexcept {
-    return T{1} << (sizeof(T) * 8 - 1);
+    return single_bit_mask<T, 0>();
 }
 
 template <Unsigned T>
 constexpr T exponent_sing_mask() noexcept {
-    return T{1} << (sizeof(T) * 8 - 2);
+    return single_bit_mask<T, 1>();
 }
 
 template <Unsigned T>
@@ -56,9 +65,14 @@ constexpr void copy_sign_bits(T& dest, T source) noexcept {
     dest |= static_cast<T>(source & sign_bits_mask<T>());
 }
 
+template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
+constexpr bool is_bit_set(T value) noexcept {
+    return (value & single_bit_mask<T, N>()) != 0;
+}
+
 template <Unsigned T>
 constexpr bool is_exponent_sing_bit_set(T value) noexcept {
-    return (value & (T{1} << (sizeof(T) * 8 - 2))) != 0;
+    return (value & exponent_sing_mask<T>()) != 0;
 }
 
 template <Unsigned T, Unsigned U>
@@ -71,8 +85,6 @@ constexpr void copy_sign_bits(T& dest, U source) noexcept {
         dest |= static_cast<T>((source & sign_bits_mask<U>()) >> (sizeof(U) - sizeof(T)) * 8);
     }
 }
-
-// TODO: proper mantissa rounding
 
 quadruple::quadruple(float value) noexcept {
     auto flat_value = std::bit_cast<uint32_t>(value);
@@ -98,6 +110,7 @@ quadruple::quadruple(float value) noexcept {
     flat_value <<= bit_size_of(mantissa1_);
     std::memcpy(&mantissa2_, &flat_value, sizeof(uint32_t));
 }
+
 quadruple::quadruple(double value) noexcept {
     auto flat_value = std::bit_cast<uint64_t>(value);
     // remove sing bits
@@ -154,8 +167,18 @@ quadruple::operator float() const noexcept {
         sizeof(float_exp));
     float_bits |= float_mantissa;
 
-    return std::bit_cast<float>(float_bits);
+    auto result = std::bit_cast<float>(float_bits);
+    if (is_bit_set<decltype(mantissa2_), 7>(mantissa2_)) {
+        if (is_bit_set<decltype(float_bits), 0>(float_bits)) {
+            return std::nextafter(result, -std::numeric_limits<float>::infinity());
+        } else {
+            return std::nextafter(result, std::numeric_limits<float>::infinity());
+        }
+    } else {
+        return result;
+    }
 }
+
 quadruple::operator double() const noexcept {
     uint64_t double_bits{0};
 
@@ -184,5 +207,14 @@ quadruple::operator double() const noexcept {
         sizeof(double_exp));
     double_bits |= double_mantissa;
 
-    return std::bit_cast<double>(double_bits);
+    auto result = std::bit_cast<double>(double_bits);
+    if (is_bit_set<decltype(mantissa3_), 4>(mantissa3_)) {
+        if (is_bit_set<decltype(double_bits), 0>(double_bits)) {
+            return std::nextafter(result, -std::numeric_limits<double>::infinity());
+        } else {
+            return std::nextafter(result, std::numeric_limits<double>::infinity());
+        }
+    } else {
+        return result;
+    }
 }
