@@ -2,6 +2,7 @@ project(tests)
 
 set(SOURCES_${PROJECT_NAME}
         test_conversion.cpp
+        test_arithmetics.cpp
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES_${PROJECT_NAME}})

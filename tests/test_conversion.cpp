@@ -14,8 +14,9 @@ struct test_type_pair {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 
+// TODO: add tests for NaN and infinity
 TEMPLATE_TEST_CASE("conversion", "[template]", float, double) {
-    SECTION("constructor") {
+    SECTION("bounded") {
         auto check_conversion = [](TestType val) {
             quadruple val_converted{val};
             TestType converted_back{val_converted};
@@ -45,7 +46,7 @@ TEMPLATE_TEST_CASE("conversion", "[template]", float, double) {
 }
 
 TEMPLATE_PRODUCT_TEST_CASE("convert through quadruple", "[first_type][second_type]", test_type_pair, ((float, double), (double, float))) {
-    SECTION("constructor") {
+    SECTION("bounded") {
         auto check_conversion = [](typename TestType::T1 val) {
             quadruple val_converted{val};
             auto converted = static_cast<TestType::T2>(val);
