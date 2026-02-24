@@ -57,6 +57,9 @@ private:
         void shift_left(uint32_t amount) noexcept;
         void shift_right(uint32_t amount) noexcept;
         [[nodiscard]] mantissa_calc operator+(const mantissa_calc& rhs) const noexcept;
+        [[nodiscard]] mantissa_calc operator-(const mantissa_calc& rhs) const noexcept;
+
+        bool operator<(const mantissa_calc& rhs) const noexcept;
     };
 
     [[nodiscard]] inline mantissa_calc convert_mantissa() const;

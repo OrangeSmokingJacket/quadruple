@@ -291,8 +291,8 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
         return quadruple{};
     }
     auto msb = res_mantissa.most_significant_bit_position();
-    // 0 adjustment if msb is 63 - upper_bit_size
-    int exponent_adj = msb - static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size - 2);
+    // 0 adjustment if msb is 64 - upper_bit_size
+    int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
     res_mantissa.normalize(exponent_adj);
     auto adjusted_exponent = static_cast<uint16_t>(exponent_to_uint16(exponent_) + static_cast<int16_t>(exponent_adj));
     if ((adjusted_exponent & single_bit_mask<uint16_t, 0>()) != 0) {
@@ -313,8 +313,62 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
 }
 
 quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
-    // TODO:
-    return rhs;
+    if (is_nan() || rhs.is_nan()) {
+        return nan();
+    }
+
+    auto this_sign = signbit();
+    if (this_sign != rhs.signbit()) {
+        return operator+(-rhs);
+    }
+    // TODO: this will fail with subnormal numbers
+    auto lhs_mantissa = convert_mantissa();
+    auto rhs_mantissa = rhs.convert_mantissa();
+    auto exp_diff = exponent_difference(exponent_, rhs.exponent_);
+
+    if (exp_diff < 0) {
+        lhs_mantissa.shift_right(static_cast<uint32_t>(-exp_diff));
+    } else if (exp_diff > 0) {
+        rhs_mantissa.shift_right(static_cast<uint32_t>(exp_diff));
+    }
+
+    mantissa_calc res_mantissa;
+    bool flipped_sign = false;
+    if (lhs_mantissa < rhs_mantissa) {
+        res_mantissa = rhs_mantissa - lhs_mantissa;
+        this_sign = !this_sign;
+        flipped_sign = true;
+    } else {
+        res_mantissa = lhs_mantissa - rhs_mantissa;
+    }
+    if (res_mantissa.is_zero()) {
+        return quadruple{};
+    }
+    auto msb = res_mantissa.most_significant_bit_position();
+    // 0 adjustment if msb is 64 - upper_bit_size
+    int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
+    res_mantissa.normalize(exponent_adj);
+    uint16_t adjusted_exponent;
+    if (flipped_sign) {
+        adjusted_exponent = static_cast<uint16_t>(exponent_to_uint16(rhs.exponent_) + static_cast<int16_t>(exponent_adj));
+    } else {
+        adjusted_exponent = static_cast<uint16_t>(exponent_to_uint16(exponent_) + static_cast<int16_t>(exponent_adj));
+    }
+    if ((adjusted_exponent & single_bit_mask<uint16_t, 0>()) != 0) {
+        // exponent overflow
+        if (this_sign) {
+            return -infinity();
+        } else {
+            return infinity();
+        }
+    }
+
+    auto res = quadruple{adjusted_exponent, 0, 0, res_mantissa.lower};
+    std::memcpy(&res.mantissa1_, &res_mantissa.upper, sizeof(res.mantissa1_) + sizeof(res.mantissa2_));
+    if (this_sign) {
+        res.exponent_ |= single_bit_mask<decltype(res.exponent_), 0>();
+    }
+    return res;
 }
 
 quadruple::quadruple(uint16_t exponent, uint16_t mantissa1, uint32_t mantissa2, uint64_t mantissa3) noexcept
@@ -395,6 +449,21 @@ quadruple::mantissa_calc quadruple::mantissa_calc::operator+(const mantissa_calc
         ++result.upper;
     }
     return result;
+}
+
+quadruple::mantissa_calc quadruple::mantissa_calc::operator-(const mantissa_calc& rhs) const noexcept {
+    mantissa_calc result;
+    result.upper = upper - rhs.upper;
+    result.lower = lower - rhs.lower;
+    if (result.lower > lower) {
+        // there was overflow
+        --result.upper;
+    }
+    return result;
+}
+
+bool quadruple::mantissa_calc::operator<(const mantissa_calc& rhs) const noexcept {
+    return upper < rhs.upper || (upper == rhs.upper && lower < rhs.lower);
 }
 
 quadruple::mantissa_calc quadruple::convert_mantissa() const {
