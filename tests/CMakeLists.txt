@@ -1,8 +1,9 @@
 project(tests)
 
 set(SOURCES_${PROJECT_NAME}
-        test_conversion.cpp
         test_arithmetics.cpp
+        test_comparison.cpp
+        test_conversion.cpp
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES_${PROJECT_NAME}})

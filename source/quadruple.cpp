@@ -233,6 +233,12 @@ quadruple::operator double() const noexcept {
     }
 }
 
+bool quadruple::is_zero() const noexcept {
+    static constexpr uint16_t zero_mask = single_bit_mask<uint16_t, 0>();
+    return static_cast<uint16_t>(exponent_ | zero_mask) == zero_mask &&
+        mantissa1_ == 0 && mantissa2_ == 0 && mantissa3_ == 0;
+}
+
 bool quadruple::is_nan() const noexcept {
     static constexpr uint16_t nan_mask = invert_bit_mask(single_bit_mask<uint16_t, 0>());
     return static_cast<uint16_t>(exponent_ & nan_mask) == nan_mask &&
@@ -381,6 +387,58 @@ quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
         res.exponent_ |= single_bit_mask<decltype(res.exponent_), 0>();
     }
     return res;
+}
+
+bool quadruple::operator==(const quadruple& rhs) const noexcept {
+    if (is_nan() || rhs.is_nan()) {
+        return false;
+    }
+    if (is_zero() && rhs.is_zero()) {
+        return true;
+    }
+
+    return exponent_ == rhs.exponent_ &&
+            mantissa1_ == rhs.mantissa1_ &&
+            mantissa2_ == rhs.mantissa2_ &&
+            mantissa3_ == rhs.mantissa3_;
+}
+
+bool quadruple::operator!=(const quadruple& rhs) const noexcept {
+    return !operator==(rhs);
+}
+
+bool quadruple::operator<(const quadruple& rhs) const noexcept {
+    if (is_nan() || rhs.is_nan()) {
+        return false;
+    }
+    auto lhs_sign = signbit();
+    auto rhs_sign = rhs.signbit();
+    if (lhs_sign != rhs_sign) {
+        return lhs_sign > rhs_sign;
+    }
+
+    auto lhs_exp = exponent_to_uint16(exponent_);
+    auto rhs_exp = exponent_to_uint16(rhs.exponent_);
+
+    if (lhs_exp < rhs_exp) {
+        return !lhs_sign;
+    } else if (lhs_exp > rhs_exp) {
+        return lhs_sign;
+    } else {
+        return convert_mantissa() < rhs.convert_mantissa();
+    }
+}
+
+bool quadruple::operator<=(const quadruple& rhs) const noexcept {
+    return operator==(rhs) || operator<(rhs);
+}
+
+bool quadruple::operator>(const quadruple& rhs) const noexcept {
+    return rhs.operator<(*this);
+}
+
+bool quadruple::operator>=(const quadruple& rhs) const noexcept {
+    return !operator<(rhs);
 }
 
 quadruple::quadruple(uint16_t exponent, uint16_t mantissa1, uint32_t mantissa2, uint64_t mantissa3) noexcept

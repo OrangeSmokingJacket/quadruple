@@ -26,6 +26,8 @@ public:
     OPTIONAL_EXPLICIT() operator float() const noexcept;
     OPTIONAL_EXPLICIT() operator double() const noexcept;
 
+    // return true for +0 and -0
+    bool is_zero() const noexcept;
     bool is_nan() const noexcept;
     bool is_subnormal() const noexcept;
     bool signbit() const noexcept;
@@ -36,6 +38,13 @@ public:
     quadruple operator-() const noexcept;
     quadruple operator+(const quadruple& rhs) const noexcept;
     quadruple operator-(const quadruple& rhs) const noexcept;
+
+    bool operator==(const quadruple& rhs) const noexcept;
+    bool operator!=(const quadruple& rhs) const noexcept;
+    bool operator<(const quadruple& rhs) const noexcept;
+    bool operator<=(const quadruple& rhs) const noexcept;
+    bool operator>(const quadruple& rhs) const noexcept;
+    bool operator>=(const quadruple& rhs) const noexcept;
 
 private:
     // data
