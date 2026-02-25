@@ -4,17 +4,11 @@
 #include <cstring>
 #include <numbers>
 
-template <typename T, typename U>
-struct test_type_pair {
-    using T1 = T;
-    using T2 = U;
-};
-
 // There are some warnings emerged from Catch2 macros
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 
-// TODO: add tests for NaN, infinity, +/- zero
+// TODO: add tests for NaN, infinity
 TEMPLATE_TEST_CASE("addition", "[template]", float, double) {
     auto check_addition = [](TestType val) {
         TestType result = val + val;

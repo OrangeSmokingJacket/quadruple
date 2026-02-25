@@ -111,6 +111,10 @@ constexpr int exponent_difference(uint16_t lhs, uint16_t rhs) noexcept {
 
 quadruple::quadruple(float value) noexcept {
     auto flat_value = std::bit_cast<uint32_t>(value);
+    if ((flat_value | single_bit_mask<uint32_t, 0>()) == single_bit_mask<uint32_t, 0>()) {
+        exponent_ = std::signbit(value) ? uint16_t{1} << 15 : 0;
+        return;
+    }
     // copy mantissa
     uint64_t mantissa_val = static_cast<uint64_t>(flat_value) & float_mantissa_mask;
     mantissa_val <<= sizeof(mantissa_val) * 8 - float_mantissa_size;
@@ -133,6 +137,10 @@ quadruple::quadruple(float value) noexcept {
 
 quadruple::quadruple(double value) noexcept {
     auto flat_value = std::bit_cast<uint64_t>(value);
+    if ((flat_value | single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
+        exponent_ = std::signbit(value) ? uint16_t{1} << 15 : 0;
+        return;
+    }
     // copy mantissa
     uint64_t mantissa_val = flat_value & double_mantissa_mask;
     mantissa_val <<= sizeof(mantissa_val) * 8 - double_mantissa_size;
