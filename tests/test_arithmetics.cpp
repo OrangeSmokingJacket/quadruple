@@ -64,6 +64,20 @@ TEMPLATE_TEST_CASE("addition", "[template]", float, double) {
             check_addition(-std::numbers::inv_sqrtpi_v<TestType>);
         }
     }
+    SECTION("signed zero") {
+        SECTION("+/+") {
+            REQUIRE(std::signbit(TestType{} + TestType{}) == (quadruple{} + quadruple{}).signbit());
+        }
+        SECTION("+/-") {
+            REQUIRE(std::signbit(TestType{} + (-TestType{})) == (quadruple{} + (-quadruple{})).signbit());
+        }
+        SECTION("-/+") {
+            REQUIRE(std::signbit((-TestType{}) + TestType{}) == ((-quadruple{}) + quadruple{}).signbit());
+        }
+        SECTION("-/-") {
+            REQUIRE(std::signbit((-TestType{}) + (-TestType{})) == ((-quadruple{}) + (-quadruple{})).signbit());
+        }
+    }
 }
 
 TEMPLATE_TEST_CASE("subtraction", "[template]", float, double) {
@@ -167,6 +181,20 @@ TEMPLATE_TEST_CASE("subtraction", "[template]", float, double) {
             SECTION("inv_sqrtpi") {
                 check_subtraction_different(-std::numbers::inv_sqrtpi_v<TestType>);
             }
+        }
+    }
+    SECTION("signed zero") {
+        SECTION("+/+") {
+            REQUIRE(std::signbit(TestType{} - TestType{}) == (quadruple{} - quadruple{}).signbit());
+        }
+        SECTION("+/-") {
+            REQUIRE(std::signbit(TestType{} - (-TestType{})) == (quadruple{} - (-quadruple{})).signbit());
+        }
+        SECTION("-/+") {
+            REQUIRE(std::signbit((-TestType{}) - TestType{}) == ((-quadruple{}) - quadruple{}).signbit());
+        }
+        SECTION("-/-") {
+            REQUIRE(std::signbit((-TestType{}) - (-TestType{})) == ((-quadruple{}) - (-quadruple{})).signbit());
         }
     }
 }

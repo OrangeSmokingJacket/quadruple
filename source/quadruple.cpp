@@ -288,7 +288,11 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
 
     auto res_mantissa = lhs_mantissa + rhs_mantissa;
     if (res_mantissa.is_zero()) {
-        return quadruple{};
+        if (this_sign) {
+            return -quadruple{};
+        } else {
+            return quadruple{};
+        }
     }
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
