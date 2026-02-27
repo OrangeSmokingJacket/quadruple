@@ -79,7 +79,7 @@ if(CCACHE_FOUND)
     set(ENV{CCACHE_COMMENTS} "1")
 endif(CCACHE_FOUND)
 
-find_package(Catch2 2.13.7 REQUIRED)
+find_package(Catch2 3.13.0 REQUIRED)
 
 include_directories(source)
 add_subdirectory(source)

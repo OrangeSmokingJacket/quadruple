@@ -1,17 +1,17 @@
 project(tests)
 
-set(SOURCES_${PROJECT_NAME}
+set(test_files
         test_arithmetics.cpp
         test_comparison.cpp
         test_conversion.cpp
 )
 
-add_executable(${PROJECT_NAME} main.cpp ${SOURCES_${PROJECT_NAME}})
+add_executable(${PROJECT_NAME} ${test_files})
 
 target_link_libraries(
         ${PROJECT_NAME} PRIVATE
         quadruple
-        Catch2::Catch2
+        Catch2::Catch2WithMain
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

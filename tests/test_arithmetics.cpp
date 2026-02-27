@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include "quadruple.hpp"
 #include <cstring>
@@ -8,7 +8,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 
-TEMPLATE_TEST_CASE("addition", "[template]", float, double) {
+TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
     auto check_addition = [](TestType val) {
         TestType result = val + val;
         quadruple val_converted{val};
@@ -126,7 +126,7 @@ TEMPLATE_TEST_CASE("addition", "[template]", float, double) {
     }
 }
 
-TEMPLATE_TEST_CASE("subtraction", "[template]", float, double) {
+TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
     auto check_subtraction_same = [](TestType val) {
         TestType val2 = val + val;
         TestType result_val = val2 - val;

@@ -8,7 +8,7 @@ class OtterbrixConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def configure(self):
-        self.requires("catch2/2.13.7@")
+        self.requires("catch2/3.13.0@")
 
     def config_options(self):
         if self.settings.get_safe("compiler.cppstd") is None:
