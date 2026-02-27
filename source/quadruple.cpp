@@ -302,7 +302,11 @@ quadruple quadruple::operator-() const noexcept {
 
 quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
-        return quiet_NaN();
+        if (signbit()) {
+            return -quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
     }
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         // TODO: handle exceptions
@@ -316,6 +320,13 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
             return operator-(-rhs);
         }
     }
+    // handle infinity
+    if (exponent_ == 0xFFFF || exponent_ == 0x7FFF) {
+        return *this;
+    } else if (rhs.exponent_ == 0xFFFF || rhs.exponent_ == 0x7FFF) {
+        return rhs;
+    }
+
     // TODO: this will fail with subnormal numbers
     auto lhs_mantissa = convert_mantissa();
     auto rhs_mantissa = rhs.convert_mantissa();
@@ -359,7 +370,11 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
 
 quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
-        return quiet_NaN();
+        if (signbit()) {
+            return -quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
     }
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         // TODO: handle exceptions
@@ -368,6 +383,16 @@ quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
     auto this_sign = signbit();
     if (this_sign != rhs.signbit()) {
         return operator+(-rhs);
+    }
+    // handle infinity
+    if (exponent_ == 0xFFFF || exponent_ == 0x7FFF) {
+        if (rhs.exponent_ == 0xFFFF || rhs.exponent_ == 0x7FFF) {
+            return -quiet_NaN();
+        } else {
+            return *this;
+        }
+    } else if (rhs.exponent_ == 0xFFFF || rhs.exponent_ == 0x7FFF) {
+        return rhs;
     }
     // TODO: this will fail with subnormal numbers
     auto lhs_mantissa = convert_mantissa();
