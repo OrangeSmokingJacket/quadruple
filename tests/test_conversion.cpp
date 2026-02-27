@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "quadruple.hpp"
+#include "utils.hpp"
 #include <cstring>
 #include <numbers>
 
@@ -14,7 +15,6 @@ struct test_type_pair {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 
-// TODO: add tests for NaN and infinity
 TEMPLATE_TEST_CASE("conversion", "[template]", float, double) {
     auto check_conversion = [](TestType val) {
         quadruple val_converted{val};
@@ -45,6 +45,15 @@ TEMPLATE_TEST_CASE("conversion", "[template]", float, double) {
         SECTION("inv_sqrtpi") {
             check_conversion(std::numbers::inv_sqrtpi_v<TestType>);
         }
+        SECTION("infinity") {
+            check_conversion(std::numeric_limits<TestType>::infinity());
+        }
+        SECTION("qNaN") {
+            check_conversion(std::numeric_limits<TestType>::quiet_NaN());
+        }
+        SECTION("sNaN") {
+            check_conversion(std::numeric_limits<TestType>::signaling_NaN());
+        }
     }
 
     SECTION("negative") {
@@ -69,6 +78,15 @@ TEMPLATE_TEST_CASE("conversion", "[template]", float, double) {
         SECTION("inv_sqrtpi") {
             check_conversion(-std::numbers::inv_sqrtpi_v<TestType>);
         }
+        SECTION("infinity") {
+            check_conversion(-std::numeric_limits<TestType>::infinity());
+        }
+        SECTION("qNaN") {
+            check_conversion(-std::numeric_limits<TestType>::quiet_NaN());
+        }
+        SECTION("sNaN") {
+            check_conversion(-std::numeric_limits<TestType>::signaling_NaN());
+        }
     }
 }
 
@@ -76,6 +94,25 @@ TEMPLATE_PRODUCT_TEST_CASE("convert through quadruple", "[first_type][second_typ
     auto check_conversion = [](typename TestType::T1 val) {
         quadruple val_converted{val};
         auto converted = static_cast<TestType::T2>(val);
+        auto double_converted = static_cast<TestType::T2>(val_converted);
+        // compare bits
+        REQUIRE(std::memcmp(&converted, &double_converted, sizeof(converted)) == 0);
+    };
+    // static_cast float::sNaN to double != double::sNaN
+    auto check_NaN_conversion = [](typename TestType::T1 val) {
+        REQUIRE(std::isnan(val));
+        quadruple val_converted{val};
+        typename TestType::T2 converted;
+        if (is_qNaN(val)) {
+            converted = std::numeric_limits<typename TestType::T2>::quiet_NaN();
+        } else if (is_sNaN(val)) {
+            converted = std::numeric_limits<typename TestType::T2>::signaling_NaN();
+        } else {
+            REQUIRE(false);
+        }
+        if (std::signbit(val)) {
+            converted = -converted;
+        }
         auto double_converted = static_cast<TestType::T2>(val_converted);
         // compare bits
         REQUIRE(std::memcmp(&converted, &double_converted, sizeof(converted)) == 0);
@@ -102,6 +139,15 @@ TEMPLATE_PRODUCT_TEST_CASE("convert through quadruple", "[first_type][second_typ
         SECTION("inv_sqrt(pi)") {
             check_conversion(std::numbers::inv_sqrtpi_v<typename TestType::T1>);
         }
+        SECTION("infinity") {
+            check_conversion(std::numeric_limits<typename TestType::T1>::infinity());
+        }
+        SECTION("qNaN") {
+            check_NaN_conversion(std::numeric_limits<typename TestType::T1>::quiet_NaN());
+        }
+        SECTION("sNaN") {
+            check_NaN_conversion(std::numeric_limits<typename TestType::T1>::signaling_NaN());
+        }
     }
     SECTION("negative") {
         SECTION("zero") {
@@ -124,6 +170,15 @@ TEMPLATE_PRODUCT_TEST_CASE("convert through quadruple", "[first_type][second_typ
         }
         SECTION("inv_sqrt(pi)") {
             check_conversion(-std::numbers::inv_sqrtpi_v<typename TestType::T1>);
+        }
+        SECTION("infinity") {
+            check_conversion(-std::numeric_limits<typename TestType::T1>::infinity());
+        }
+        SECTION("qNaN") {
+            check_NaN_conversion(-std::numeric_limits<typename TestType::T1>::quiet_NaN());
+        }
+        SECTION("sNaN") {
+            check_NaN_conversion(-std::numeric_limits<typename TestType::T1>::signaling_NaN());
         }
     }
 }

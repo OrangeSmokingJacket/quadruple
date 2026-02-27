@@ -23,23 +23,34 @@ TEST_CASE("equals") {
     }
     SECTION("NaN") {
         SECTION("+0") {
-            REQUIRE_FALSE(quadruple{} == quadruple::nan());
-            REQUIRE_FALSE(quadruple::nan() == quadruple{});
+            REQUIRE_FALSE(quadruple{} == quadruple::quiet_NaN());
+            REQUIRE_FALSE(quadruple{} == quadruple::signaling_NaN());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == quadruple{});
+            REQUIRE_FALSE(quadruple::signaling_NaN() == quadruple{});
         }
         SECTION("-0") {
-            REQUIRE_FALSE((-quadruple{}) == quadruple::nan());
-            REQUIRE_FALSE(quadruple::nan() == (-quadruple{}));
+            REQUIRE_FALSE((-quadruple{}) == quadruple::quiet_NaN());
+            REQUIRE_FALSE((-quadruple{}) == quadruple::signaling_NaN());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == (-quadruple{}));
+            REQUIRE_FALSE(quadruple::signaling_NaN() == (-quadruple{}));
         }
         SECTION("+inf") {
-            REQUIRE_FALSE(quadruple::infinity() == quadruple::nan());
-            REQUIRE_FALSE(quadruple::nan() == quadruple::infinity());
+            REQUIRE_FALSE(quadruple::infinity() == quadruple::quiet_NaN());
+            REQUIRE_FALSE(quadruple::infinity() == quadruple::signaling_NaN());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == quadruple::infinity());
+            REQUIRE_FALSE(quadruple::signaling_NaN() == quadruple::infinity());
         }
         SECTION("-inf") {
-            REQUIRE_FALSE((-quadruple::infinity()) == quadruple::nan());
-            REQUIRE_FALSE(quadruple::nan() == (-quadruple::infinity()));
+            REQUIRE_FALSE((-quadruple::infinity()) == quadruple::quiet_NaN());
+            REQUIRE_FALSE((-quadruple::infinity()) == quadruple::signaling_NaN());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == (-quadruple::infinity()));
+            REQUIRE_FALSE(quadruple::signaling_NaN() == (-quadruple::infinity()));
         }
         SECTION("NaN") {
-            REQUIRE_FALSE(quadruple::nan() == quadruple::nan());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == quadruple::quiet_NaN());
+            REQUIRE_FALSE(quadruple::quiet_NaN() == quadruple::signaling_NaN());
+            REQUIRE_FALSE(quadruple::signaling_NaN() == quadruple::quiet_NaN());
+            REQUIRE_FALSE(quadruple::signaling_NaN() == quadruple::signaling_NaN());
         }
     }
 }

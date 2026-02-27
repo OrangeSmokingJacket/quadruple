@@ -1,11 +1,8 @@
 #include "quadruple.hpp"
+#include "utils.hpp"
 
 #include <bit>
-#include <bitset>
 #include <cassert>
-#include <cmath>
-#include <cstring>
-#include <type_traits>
 
 static_assert(sizeof(quadruple) == 16);
 static_assert(alignof(quadruple) == 8);
@@ -16,131 +13,77 @@ static_assert(std::is_trivially_copy_assignable_v<quadruple>);
 static_assert(std::is_trivially_move_constructible_v<quadruple>);
 static_assert(std::is_trivially_move_assignable_v<quadruple>);
 
-constexpr size_t float_exponent_size = 8;
-constexpr size_t double_exponent_size = 11;
-constexpr size_t quadruple_exponent_size = 15;
-constexpr size_t float_mantissa_size = 23;
-constexpr size_t double_mantissa_size = 52;
-constexpr size_t quadruple_mantissa_size = 112;
-
-constexpr uint16_t float_exponent_filler = 0b0011111110000000;
-constexpr uint16_t double_exponent_filler = 0b0011110000000000;
-
-constexpr uint64_t float_mantissa_mask = (uint64_t{1} << float_mantissa_size) - 1;
-constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) - 1;
-
-// mantissa_calc
-constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
-
-template<class T>
-concept Unsigned = requires {
-    std::is_unsigned_v<T>;
-};
-
-template<class T, size_t N>
-concept ValidBitIndex = sizeof(T) * 8 > N;
-
-template <typename T>
-constexpr size_t bit_size_of() noexcept {
-    return sizeof(T) * 8;
-}
-
-template <typename T>
-constexpr size_t bit_size_of(T&& value) noexcept {
-    return sizeof(value) * 8;
-}
-
-template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
-constexpr T single_bit_mask() noexcept{
-    return T{1} << (sizeof(T) * 8 - N - 1);
-}
-
-template <Unsigned T>
-constexpr T value_sing_mask() noexcept {
-    return single_bit_mask<T, 0>();
-}
-
-template <Unsigned T>
-constexpr T exponent_sing_mask() noexcept {
-    return single_bit_mask<T, 1>();
-}
-
-template <Unsigned T>
-constexpr T sign_bits_mask() noexcept {
-    return value_sing_mask<T>() | exponent_sing_mask<T>();
-}
-
-template <Unsigned T>
-constexpr T invert_bit_mask(T mask) noexcept {
-    return static_cast<T>(~mask);
-}
-
-template <Unsigned T>
-constexpr void copy_sign_bits(T& dest, T source) noexcept {
-    dest |= static_cast<T>(source & sign_bits_mask<T>());
-}
-
-template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
-constexpr bool is_bit_set(T value) noexcept {
-    return (value & single_bit_mask<T, N>()) != 0;
-}
-
-template <Unsigned T>
-constexpr bool is_exponent_sing_bit_set(T value) noexcept {
-    return (value & exponent_sing_mask<T>()) != 0;
-}
-
-template <Unsigned T, Unsigned U>
-constexpr void copy_sign_bits(T& dest, U source) noexcept {
-    if constexpr (sizeof(T) == sizeof(U)) {
-        dest |= source & sign_bits_mask<U>();
-    } else if constexpr (sizeof(T) > sizeof(U)) {
-        dest |= static_cast<T>(source & sign_bits_mask<U>()) << (sizeof(T) - sizeof(U)) * 8;
-    } else {
-        dest |= static_cast<T>((source & sign_bits_mask<U>()) >> (sizeof(U) - sizeof(T)) * 8);
-    }
-}
-
-constexpr uint16_t exponent_to_uint16(uint16_t exponent_value) noexcept {
-    return exponent_value & invert_bit_mask(single_bit_mask<uint16_t, 0>());
-}
-
-constexpr int exponent_difference(uint16_t lhs, uint16_t rhs) noexcept {
-    return exponent_to_uint16(lhs) - exponent_to_uint16(rhs);
-}
-
 quadruple::quadruple(float value) noexcept {
-    auto flat_value = std::bit_cast<uint32_t>(value);
-    if ((flat_value | single_bit_mask<uint32_t, 0>()) == single_bit_mask<uint32_t, 0>()) {
-        exponent_ = std::signbit(value) ? uint16_t{1} << 15 : 0;
+    // handle NaN
+    if (is_qNaN(value)) {
+        if (std::signbit(value)) {
+            *this = -quiet_NaN();
+        } else {
+            *this = quiet_NaN();
+        }
+        return;
+    } else if (is_sNaN(value)) {
+        if (std::signbit(value)) {
+            *this = -signaling_NaN();
+        } else {
+            *this = signaling_NaN();
+        }
         return;
     }
+
+    auto flat_value = std::bit_cast<uint32_t>(value);
     // copy mantissa
     uint64_t mantissa_val = static_cast<uint64_t>(flat_value) & float_mantissa_mask;
     mantissa_val <<= sizeof(mantissa_val) * 8 - float_mantissa_size;
     std::memcpy(&mantissa1_,
         reinterpret_cast<char*>(&mantissa_val) + sizeof(exponent_),
         sizeof(mantissa1_) + sizeof(mantissa2_));
-    // remove sing bits
-    flat_value <<= 2;
-    std::memcpy(&exponent_,
-        reinterpret_cast<char*>(&flat_value) + (sizeof(flat_value) - sizeof(exponent_)),
-        sizeof(exponent_));
-    // align exponent bits
-    exponent_ >>= bit_size_of(exponent_) - float_exponent_size + 1;
-    // place sing bits back
-    copy_sign_bits(exponent_, std::bit_cast<uint32_t>(value));
-    if (!is_exponent_sing_bit_set(std::bit_cast<uint32_t>(value))) {
-        exponent_ |= float_exponent_filler;
+    // handle edge cases (max and min exponent is not a power of 2)
+    if ((flat_value & float_exponent_max_mask) == float_exponent_max_mask) {
+        exponent_ = quadruple_exponent_max;
+        if ((flat_value & single_bit_mask<uint32_t, 0>()) == single_bit_mask<uint32_t, 0>()) {
+            exponent_ |= single_bit_mask<uint16_t, 0>();
+        }
+    } else if ((flat_value | float_exponent_min_mask) == float_exponent_min_mask) {
+        exponent_ = quadruple_exponent_min;
+        if ((flat_value & single_bit_mask<uint32_t, 0>()) == single_bit_mask<uint32_t, 0>()) {
+            exponent_ |= single_bit_mask<uint16_t, 0>();
+        }
+    } else {
+        // remove sing bits
+        flat_value <<= 2;
+        std::memcpy(&exponent_,
+            reinterpret_cast<char*>(&flat_value) + (sizeof(flat_value) - sizeof(exponent_)),
+            sizeof(exponent_));
+        // align exponent bits
+        exponent_ >>= bit_size_of(exponent_) - float_exponent_size + 1;
+        // place sing bit
+        copy_sign_bits(exponent_, std::bit_cast<uint32_t>(value));
+        if (!is_exponent_sing_bit_set(std::bit_cast<uint32_t>(value))) {
+            exponent_ |= float_exponent_filler;
+        }
     }
 }
 
 quadruple::quadruple(double value) noexcept {
-    auto flat_value = std::bit_cast<uint64_t>(value);
-    if ((flat_value | single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
-        exponent_ = std::signbit(value) ? uint16_t{1} << 15 : 0;
+    // handle NaN
+    if (is_qNaN(value)) {
+        if (std::signbit(value)) {
+            *this = -quiet_NaN();
+        } else {
+            *this = quiet_NaN();
+        }
+        return;
+    } else if (is_sNaN(value)) {
+        if (std::signbit(value)) {
+            *this = -signaling_NaN();
+        } else {
+            *this = signaling_NaN();
+        }
         return;
     }
+
+    auto flat_value = std::bit_cast<uint64_t>(value);
     // copy mantissa
     uint64_t mantissa_val = flat_value & double_mantissa_mask;
     mantissa_val <<= sizeof(mantissa_val) * 8 - double_mantissa_size;
@@ -149,29 +92,71 @@ quadruple::quadruple(double value) noexcept {
         sizeof(mantissa1_) + sizeof(mantissa2_));
     mantissa_val <<= (sizeof(mantissa1_) + sizeof(mantissa2_)) * 8;
     mantissa3_ = mantissa_val;
-    // remove sing bits
-    flat_value <<= 2;
-    std::memcpy(&exponent_,
-        reinterpret_cast<char*>(&flat_value) + (sizeof(flat_value) - sizeof(exponent_)),
-        sizeof(exponent_));
-    // align exponent bits
-    exponent_ >>= bit_size_of(exponent_) - double_exponent_size + 1;
-    // place sing bits back
-    copy_sign_bits(exponent_, std::bit_cast<uint64_t>(value));
-    if (!is_exponent_sing_bit_set(std::bit_cast<uint64_t>(value))) {
-        exponent_ |= double_exponent_filler;
+    // handle edge cases (max and min exponent is not a power of 2)
+    if ((flat_value & double_exponent_max_mask) == double_exponent_max_mask) {
+        exponent_ = quadruple_exponent_max;
+        if ((flat_value & single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
+            exponent_ |= single_bit_mask<uint16_t, 0>();
+        }
+    } else if ((flat_value | double_exponent_min_mask) == double_exponent_min_mask) {
+        exponent_ = quadruple_exponent_min;
+        if ((flat_value & single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
+            exponent_ |= single_bit_mask<uint16_t, 0>();
+        }
+    } else {
+        // remove sing bits
+        flat_value <<= 2;
+        std::memcpy(&exponent_,
+            reinterpret_cast<char*>(&flat_value) + (sizeof(flat_value) - sizeof(exponent_)),
+            sizeof(exponent_));
+        // align exponent bits
+        exponent_ >>= bit_size_of(exponent_) - double_exponent_size + 1;
+        // place sing bit
+        copy_sign_bits(exponent_, std::bit_cast<uint64_t>(value));
+        if (!is_exponent_sing_bit_set(std::bit_cast<uint64_t>(value))) {
+            exponent_ |= double_exponent_filler;
+        }
     }
 }
 
 quadruple::operator float() const noexcept {
-    uint32_t float_bits{0};
+    // handle NaN
+    if (is_quiet_NaN()) {
+        if (signbit()) {
+            return -std::numeric_limits<float>::quiet_NaN();
+        } else {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
+    } else if (is_signaling_NaN()) {
+        if (signbit()) {
+            return -std::numeric_limits<float>::signaling_NaN();
+        } else {
+            return std::numeric_limits<float>::signaling_NaN();
+        }
+    }
 
+    uint32_t float_bits{0};
     // create exponent
-    uint16_t float_exp = exponent_;
-    // shift left by extra 2 bits to remove signs
-    float_exp <<= bit_size_of(exponent_) - float_exponent_size + 1;
-    float_exp >>= 2;
-    copy_sign_bits(float_exp, exponent_);
+    if ((exponent_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        float_bits = float_exponent_max_mask;
+        if (signbit()) {
+            float_bits |= single_bit_mask<uint32_t, 0>();
+        }
+    } else if ((exponent_ | single_bit_mask<uint16_t, 0>()) == single_bit_mask<uint16_t, 0>()) {
+        float_bits = uint32_t{0};
+        if (signbit()) {
+            float_bits |= single_bit_mask<uint32_t, 0>();
+        }
+    } else {
+        uint16_t float_exp = exponent_;
+        // shift left by extra 2 bits to remove signs
+        float_exp <<= bit_size_of(exponent_) - float_exponent_size + 1;
+        float_exp >>= 2;
+        copy_sign_bits(float_exp, exponent_);
+        std::memcpy(reinterpret_cast<char*>(&float_bits) + (sizeof(float_bits) - sizeof(float_exp)),
+            &float_exp,
+            sizeof(float_exp));
+    }
 
     // create mantissa
     uint64_t mantissa_val{0};
@@ -181,9 +166,6 @@ quadruple::operator float() const noexcept {
     mantissa_val >>= sizeof(mantissa_val) * 8 - float_mantissa_size;
 
     // combine
-    std::memcpy(reinterpret_cast<char*>(&float_bits) + (sizeof(float_bits) - sizeof(float_exp)),
-        &float_exp,
-        sizeof(float_exp));
     float_bits |= static_cast<uint32_t>(mantissa_val);
 
     auto result = std::bit_cast<float>(float_bits);
@@ -199,13 +181,43 @@ quadruple::operator float() const noexcept {
 }
 
 quadruple::operator double() const noexcept {
-    uint64_t double_bits{0};
+    // handle NaN
+    if (is_quiet_NaN()) {
+        if (signbit()) {
+            return -std::numeric_limits<double>::quiet_NaN();
+        } else {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    } else if (is_signaling_NaN()) {
+        if (signbit()) {
+            return -std::numeric_limits<double>::signaling_NaN();
+        } else {
+            return std::numeric_limits<double>::signaling_NaN();
+        }
+    }
 
+    uint64_t double_bits{0};
     // create exponent
-    uint16_t double_exp = exponent_;
-    double_exp <<= bit_size_of(exponent_) - double_exponent_size + 1;
-    double_exp >>= 2;
-    copy_sign_bits(double_exp, exponent_);
+    if ((exponent_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        double_bits = double_exponent_max_mask;
+        if (signbit()) {
+            double_bits |= single_bit_mask<uint64_t, 0>();
+        }
+    } else if ((exponent_ | single_bit_mask<uint16_t, 0>()) == single_bit_mask<uint16_t, 0>()) {
+        double_bits = uint64_t{0};
+        if (signbit()) {
+            double_bits |= single_bit_mask<uint64_t, 0>();
+        }
+    } else {
+        uint16_t double_exp = exponent_;
+        // shift left by extra 2 bits to remove signs
+        double_exp <<= bit_size_of(exponent_) - double_exponent_size + 1;
+        double_exp >>= 2;
+        copy_sign_bits(double_exp, exponent_);
+        std::memcpy(reinterpret_cast<char*>(&double_bits) + (sizeof(double_bits) - sizeof(double_exp)),
+            &double_exp,
+            sizeof(double_exp));
+    }
 
     // create mantissa
     uint64_t mantissa_val = mantissa3_;
@@ -216,9 +228,6 @@ quadruple::operator double() const noexcept {
     mantissa_val >>= sizeof(mantissa_val) * 8 - double_mantissa_size;
 
     // combine
-    std::memcpy(reinterpret_cast<char*>(&double_bits) + (sizeof(double_bits) - sizeof(double_exp)),
-        &double_exp,
-        sizeof(double_exp));
     double_bits |= mantissa_val;
 
     auto result = std::bit_cast<double>(double_bits);
@@ -239,10 +248,18 @@ bool quadruple::is_zero() const noexcept {
         mantissa1_ == 0 && mantissa2_ == 0 && mantissa3_ == 0;
 }
 
-bool quadruple::is_nan() const noexcept {
-    static constexpr uint16_t nan_mask = invert_bit_mask(single_bit_mask<uint16_t, 0>());
-    return static_cast<uint16_t>(exponent_ & nan_mask) == nan_mask &&
-        (mantissa1_ != 0 || mantissa2_ != 0 || mantissa3_ != 0);
+bool quadruple::is_NaN() const noexcept {
+    return is_quiet_NaN() || is_signaling_NaN();
+}
+
+bool quadruple::is_quiet_NaN() const noexcept {
+    return (exponent_ == 0x7FFF || exponent_ == 0xFFFF) &&
+           mantissa1_ == 0xFFFF && mantissa2_ == 0xFFFFFFFF && mantissa3_ == 0xFFFFFFFFFFFFFFFF;
+}
+
+bool quadruple::is_signaling_NaN() const noexcept {
+    return (exponent_ == 0x7FFF || exponent_ == 0xFFFF) &&
+           mantissa1_ == 0xAAAA && mantissa2_ == 0xAAAAAAAA && mantissa3_ == 0xAAAAAAAAAAAAAAAA;
 }
 
 bool quadruple::is_subnormal() const noexcept {
@@ -254,11 +271,18 @@ bool quadruple::signbit() const noexcept {
     return (exponent_ & single_bit_mask<decltype(exponent_), 0>()) != 0;
 }
 
-quadruple quadruple::nan() noexcept {
+quadruple quadruple::quiet_NaN() noexcept {
     return {0x7FFF,
-            std::numeric_limits<uint16_t>::max(),
-            std::numeric_limits<uint32_t>::max(),
-            std::numeric_limits<uint64_t>::max()};
+        0xFFFF,
+        0xFFFFFFFF,
+        0xFFFFFFFFFFFFFFFF};
+}
+
+quadruple quadruple::signaling_NaN() noexcept {
+    return {0x7FFF,
+            0xAAAA,
+            0xAAAAAAAA,
+            0xAAAAAAAAAAAAAAAA};
 }
 
 quadruple quadruple::infinity() noexcept {
@@ -277,8 +301,11 @@ quadruple quadruple::operator-() const noexcept {
 }
 
 quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
-    if (is_nan() || rhs.is_nan()) {
-        return nan();
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+        return quiet_NaN();
+    }
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
+        // TODO: handle exceptions
     }
 
     auto this_sign = signbit();
@@ -331,8 +358,11 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
 }
 
 quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
-    if (is_nan() || rhs.is_nan()) {
-        return nan();
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+        return quiet_NaN();
+    }
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
+        // TODO: handle exceptions
     }
 
     auto this_sign = signbit();
@@ -390,7 +420,7 @@ quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
 }
 
 bool quadruple::operator==(const quadruple& rhs) const noexcept {
-    if (is_nan() || rhs.is_nan()) {
+    if (is_NaN() || rhs.is_NaN()) {
         return false;
     }
     if (is_zero() && rhs.is_zero()) {
@@ -408,7 +438,7 @@ bool quadruple::operator!=(const quadruple& rhs) const noexcept {
 }
 
 bool quadruple::operator<(const quadruple& rhs) const noexcept {
-    if (is_nan() || rhs.is_nan()) {
+    if (is_NaN() || rhs.is_NaN()) {
         return false;
     }
     auto lhs_sign = signbit();

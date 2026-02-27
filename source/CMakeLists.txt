@@ -5,6 +5,7 @@ set(SOURCE_${PROJECT_NAME}
 )
 set(HEADERS_${PROJECT_NAME}
         quadruple.hpp
+        utils.hpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR})

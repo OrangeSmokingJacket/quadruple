@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <limits>
 
 #ifdef DIMPLICIT_CASTS
 #define OPTIONAL_EXPLICIT()
@@ -28,10 +29,13 @@ public:
 
     // return true for +0 and -0
     bool is_zero() const noexcept;
-    bool is_nan() const noexcept;
+    bool is_NaN() const noexcept;
+    bool is_quiet_NaN() const noexcept;
+    bool is_signaling_NaN() const noexcept;
     bool is_subnormal() const noexcept;
     bool signbit() const noexcept;
-    static quadruple nan() noexcept;
+    static quadruple quiet_NaN() noexcept;
+    static quadruple signaling_NaN() noexcept;
     static quadruple infinity() noexcept;
 
     quadruple operator+() const noexcept;
