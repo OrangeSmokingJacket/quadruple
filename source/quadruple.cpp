@@ -480,7 +480,7 @@ bool quadruple::operator<(const quadruple& rhs) const noexcept {
     } else if (lhs_exp > rhs_exp) {
         return lhs_sign;
     } else {
-        return convert_mantissa() < rhs.convert_mantissa();
+        return (convert_mantissa() < rhs.convert_mantissa()) != lhs_sign;
     }
 }
 
