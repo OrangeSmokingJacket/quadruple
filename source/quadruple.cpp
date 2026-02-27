@@ -253,12 +253,12 @@ bool quadruple::is_NaN() const noexcept {
 }
 
 bool quadruple::is_quiet_NaN() const noexcept {
-    return (exponent_ == 0x7FFF || exponent_ == 0xFFFF) &&
+    return (exponent_ & 0x7FFF) == 0x7FFF &&
            mantissa1_ == 0xFFFF && mantissa2_ == 0xFFFFFFFF && mantissa3_ == 0xFFFFFFFFFFFFFFFF;
 }
 
 bool quadruple::is_signaling_NaN() const noexcept {
-    return (exponent_ == 0x7FFF || exponent_ == 0xFFFF) &&
+    return (exponent_ & 0x7FFF) == 0x7FFF &&
            mantissa1_ == 0xAAAA && mantissa2_ == 0xAAAAAAAA && mantissa3_ == 0xAAAAAAAAAAAAAAAA;
 }
 
