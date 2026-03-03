@@ -1,4 +1,5 @@
 #pragma once
+#include <bit>
 #include <cstdint>
 #include <bitset>
 #include <cmath>
@@ -36,6 +37,7 @@ concept Unsigned = requires {
 template<class T>
 concept FloatingPoint = requires {
     std::is_floating_point_v<T>;
+    sizeof(T) == sizeof(uint32_t) || sizeof(T) == sizeof(uint64_t);
 };
 
 template<class T, size_t N>
@@ -49,22 +51,6 @@ constexpr size_t bit_size_of() noexcept {
 template <typename T>
 constexpr size_t bit_size_of(T&& value) noexcept {
     return sizeof(value) * 8;
-}
-
-template <FloatingPoint T>
-constexpr bool is_sNaN(T value) noexcept {
-    constexpr T sNaN = std::numeric_limits<T>::signaling_NaN();
-    constexpr T minus_sNaN = -sNaN;
-    return std::memcmp(&value, &sNaN, sizeof(T)) == 0 ||
-           std::memcmp(&value, &minus_sNaN, sizeof(T)) == 0;
-}
-
-template <FloatingPoint T>
-constexpr bool is_qNaN(T value) noexcept {
-    constexpr T qNaN = std::numeric_limits<T>::quiet_NaN();
-    constexpr T minus_qNaN = -qNaN;
-    return std::memcmp(&value, &qNaN, sizeof(T)) == 0 ||
-           std::memcmp(&value, &minus_qNaN, sizeof(T)) == 0;
 }
 
 template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
@@ -124,4 +110,35 @@ constexpr uint16_t exponent_to_uint16(uint16_t exponent_value) noexcept {
 
 constexpr int exponent_difference(uint16_t lhs, uint16_t rhs) noexcept {
     return exponent_to_uint16(lhs) - exponent_to_uint16(rhs);
+}
+
+template <FloatingPoint T>
+constexpr bool is_sNaN(T value) noexcept {
+    constexpr T sNaN = std::numeric_limits<T>::signaling_NaN();
+    if constexpr (sizeof(T) == sizeof(uint32_t)) {
+        return (std::bit_cast<uint32_t>(sNaN) & std::bit_cast<uint32_t>(value)) == std::bit_cast<uint32_t>(sNaN);
+    } else {
+        return (std::bit_cast<uint64_t>(sNaN) & std::bit_cast<uint64_t>(value)) == std::bit_cast<uint64_t>(sNaN);
+    }
+}
+
+template <FloatingPoint T>
+constexpr bool is_qNaN(T value) noexcept {
+    constexpr T qNaN = std::numeric_limits<T>::quiet_NaN();
+    if constexpr (sizeof(T) == sizeof(uint32_t)) {
+        return (std::bit_cast<uint32_t>(qNaN) & std::bit_cast<uint32_t>(value)) == std::bit_cast<uint32_t>(qNaN);
+    } else {
+        return (std::bit_cast<uint64_t>(qNaN) & std::bit_cast<uint64_t>(value)) == std::bit_cast<uint64_t>(qNaN);
+    }
+}
+
+// avoids triggering FE_INVALID
+template <FloatingPoint T>
+constexpr T negative_sNaN() noexcept {
+    constexpr T sNaN = std::numeric_limits<T>::signaling_NaN();
+    if constexpr (sizeof(T) == sizeof(uint32_t)) {
+        return std::bit_cast<T>(std::bit_cast<uint32_t>(sNaN) ^ single_bit_mask<uint32_t, 0>());
+    } else {
+        return std::bit_cast<T>(std::bit_cast<uint64_t>(sNaN) ^ single_bit_mask<uint64_t, 0>());
+    }
 }

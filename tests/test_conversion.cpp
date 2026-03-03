@@ -79,7 +79,7 @@ TEMPLATE_TEST_CASE("same type conversion", "[conversion]", float, double) {
             check_conversion(-std::numeric_limits<TestType>::quiet_NaN());
         }
         SECTION("sNaN") {
-            check_conversion(-std::numeric_limits<TestType>::signaling_NaN());
+            check_conversion(negative_sNaN<TestType>());
         }
     }
 }
@@ -106,7 +106,14 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
             REQUIRE(false);
         }
         if (std::signbit(val)) {
-            converted = -converted;
+            // Bitflip sign, to avoid triggering possible sNaN checks
+            if constexpr (sizeof(ToType) == sizeof(uint32_t)) {
+                converted = std::bit_cast<ToType>(std::bit_cast<uint32_t>(converted) ^ single_bit_mask<uint32_t, 0>());
+            } else if (sizeof(ToType) == sizeof(uint64_t)) {
+                converted = std::bit_cast<ToType>(std::bit_cast<uint64_t>(converted) ^ single_bit_mask<uint64_t, 0>());
+            } else {
+                REQUIRE(false);
+            }
         }
         auto double_converted = static_cast<ToType>(val_converted);
         // compare bits
@@ -173,7 +180,7 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
             check_NaN_conversion(-std::numeric_limits<FromType>::quiet_NaN());
         }
         SECTION("sNaN") {
-            check_NaN_conversion(-std::numeric_limits<FromType>::signaling_NaN());
+            check_NaN_conversion(negative_sNaN<FromType>());
         }
     }
 }

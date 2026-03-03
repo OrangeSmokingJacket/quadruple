@@ -3,6 +3,7 @@
 
 #include <bit>
 #include <cassert>
+#include <cfenv>
 
 static_assert(sizeof(quadruple) == 16);
 static_assert(alignof(quadruple) == 8);
@@ -17,14 +18,14 @@ quadruple::quadruple(float value) noexcept {
     // handle NaN
     if (is_qNaN(value)) {
         if (std::signbit(value)) {
-            *this = -quiet_NaN();
+            *this = negative_quiet_NaN();
         } else {
             *this = quiet_NaN();
         }
         return;
     } else if (is_sNaN(value)) {
         if (std::signbit(value)) {
-            *this = -signaling_NaN();
+            *this = negative_signaling_NaN();
         } else {
             *this = signaling_NaN();
         }
@@ -69,14 +70,14 @@ quadruple::quadruple(double value) noexcept {
     // handle NaN
     if (is_qNaN(value)) {
         if (std::signbit(value)) {
-            *this = -quiet_NaN();
+            *this = negative_quiet_NaN();
         } else {
             *this = quiet_NaN();
         }
         return;
     } else if (is_sNaN(value)) {
         if (std::signbit(value)) {
-            *this = -signaling_NaN();
+            *this = negative_signaling_NaN();
         } else {
             *this = signaling_NaN();
         }
@@ -129,7 +130,7 @@ quadruple::operator float() const noexcept {
         }
     } else if (is_signaling_NaN()) {
         if (signbit()) {
-            return -std::numeric_limits<float>::signaling_NaN();
+            return negative_sNaN<float>();
         } else {
             return std::numeric_limits<float>::signaling_NaN();
         }
@@ -190,7 +191,7 @@ quadruple::operator double() const noexcept {
         }
     } else if (is_signaling_NaN()) {
         if (signbit()) {
-            return -std::numeric_limits<double>::signaling_NaN();
+            return negative_sNaN<double>();
         } else {
             return std::numeric_limits<double>::signaling_NaN();
         }
@@ -278,8 +279,22 @@ quadruple quadruple::quiet_NaN() noexcept {
         0xFFFFFFFFFFFFFFFF};
 }
 
+quadruple quadruple::negative_quiet_NaN() noexcept {
+    return {0xFFFF,
+        0xFFFF,
+        0xFFFFFFFF,
+        0xFFFFFFFFFFFFFFFF};
+}
+
 quadruple quadruple::signaling_NaN() noexcept {
     return {0x7FFF,
+            0xAAAA,
+            0xAAAAAAAA,
+            0xAAAAAAAAAAAAAAAA};
+}
+
+quadruple quadruple::negative_signaling_NaN() noexcept {
+    return {0xFFFF,
             0xAAAA,
             0xAAAAAAAA,
             0xAAAAAAAAAAAAAAAA};
@@ -289,27 +304,66 @@ quadruple quadruple::infinity() noexcept {
     return {0x7FFF, 0, 0, 0};
 }
 
-quadruple quadruple::operator+() const noexcept {
+quadruple& quadruple::flip_sign() noexcept {
+    exponent_ ^= single_bit_mask<uint16_t, 0>();
     return *this;
 }
 
-quadruple quadruple::operator-() const noexcept {
-    return {static_cast<uint16_t>(exponent_ ^ single_bit_mask<uint16_t, 0>()),
-        mantissa1_,
-        mantissa2_,
-        mantissa3_};
+quadruple quadruple::operator+() const {
+    if constexpr (UNARY_SIGNALING_PRESERVED) {
+        return *this;
+    } else {
+        if (is_signaling_NaN()) {
+            std::feraiseexcept(FE_INVALID);
+            if (signbit()) {
+                return negative_quiet_NaN();
+            } else {
+                return quiet_NaN();
+            }
+        } else {
+            return *this;
+        }
+    }
 }
 
-quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
+quadruple quadruple::operator-() const {
+    if constexpr (UNARY_SIGNALING_PRESERVED) {
+        return {static_cast<uint16_t>(exponent_ ^ single_bit_mask<uint16_t, 0>()),
+            mantissa1_,
+            mantissa2_,
+            mantissa3_};
+    } else {
+        if (is_signaling_NaN()) {
+            std::feraiseexcept(FE_INVALID);
+            if (signbit()) {
+                return quiet_NaN();
+            } else {
+                return negative_quiet_NaN();
+            }
+        } else {
+            return {static_cast<uint16_t>(exponent_ ^ single_bit_mask<uint16_t, 0>()),
+                mantissa1_,
+                mantissa2_,
+                mantissa3_};
+        }
+    }
+}
+
+quadruple quadruple::operator+(const quadruple& rhs) const {
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
         if (signbit()) {
-            return -quiet_NaN();
+            return negative_quiet_NaN();
         } else {
             return quiet_NaN();
         }
     }
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
-        // TODO: handle exceptions
+        std::feraiseexcept(FE_INVALID);
+        if (signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
     }
 
     auto this_sign = signbit();
@@ -368,16 +422,21 @@ quadruple quadruple::operator+(const quadruple& rhs) const noexcept {
     return res;
 }
 
-quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
+quadruple quadruple::operator-(const quadruple& rhs) const {
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
         if (signbit()) {
-            return -quiet_NaN();
+            return negative_quiet_NaN();
         } else {
             return quiet_NaN();
         }
     }
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
-        // TODO: handle exceptions
+        std::feraiseexcept(FE_INVALID);
+        if (signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
     }
 
     auto this_sign = signbit();
@@ -387,7 +446,7 @@ quadruple quadruple::operator-(const quadruple& rhs) const noexcept {
     // handle infinity
     if (exponent_ == 0xFFFF || exponent_ == 0x7FFF) {
         if (rhs.exponent_ == 0xFFFF || rhs.exponent_ == 0x7FFF) {
-            return -quiet_NaN();
+            return negative_quiet_NaN();
         } else {
             return *this;
         }
