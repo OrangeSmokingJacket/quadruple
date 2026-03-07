@@ -26,6 +26,11 @@ constexpr uint16_t quadruple_exponent_max = 0b0111111111111111;
 constexpr uint64_t float_mantissa_mask = (uint64_t{1} << float_mantissa_size) - 1;
 constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) - 1;
 
+constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
+constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
+constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
+constexpr uint16_t min_double_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (double_exponent_size - 1)) + 1;
+
 // mantissa_calc
 constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
 

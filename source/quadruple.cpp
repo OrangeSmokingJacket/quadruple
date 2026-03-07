@@ -149,6 +149,13 @@ quadruple::operator float() const noexcept {
             float_bits |= single_bit_mask<uint32_t, 0>();
         }
     } else {
+        auto numeric_exponent = exponent_to_uint16(exponent_);
+        if (numeric_exponent >= max_float_exponent) {
+            return signbit() ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+        } else if (numeric_exponent <= min_float_exponent) {
+            // TODO: handle subnormal numbers
+            return signbit() ? -0.0 : 0.0;
+        }
         uint16_t float_exp = exponent_;
         // shift left by extra 2 bits to remove signs
         float_exp <<= bit_size_of(exponent_) - float_exponent_size + 1;
@@ -210,6 +217,13 @@ quadruple::operator double() const noexcept {
             double_bits |= single_bit_mask<uint64_t, 0>();
         }
     } else {
+        auto numeric_exponent = exponent_to_uint16(exponent_);
+        if (numeric_exponent >= max_double_exponent) {
+            return signbit() ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+        } else if (numeric_exponent <= min_double_exponent) {
+            // TODO: handle subnormal numbers
+            return signbit() ? -0 : 0;
+        }
         uint16_t double_exp = exponent_;
         // shift left by extra 2 bits to remove signs
         double_exp <<= bit_size_of(exponent_) - double_exponent_size + 1;
