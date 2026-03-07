@@ -4,6 +4,7 @@ set(test_files
         test_arithmetics.cpp
         test_comparison.cpp
         test_conversion.cpp
+        test_utils.cpp
 )
 
 add_executable(${PROJECT_NAME} ${test_files})

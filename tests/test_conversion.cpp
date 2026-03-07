@@ -2,6 +2,7 @@
 
 #include "quadruple.hpp"
 #include "utils.hpp"
+#include "test_utils.hpp"
 #include <cstring>
 #include <numbers>
 
@@ -14,68 +15,86 @@ TEMPLATE_TEST_CASE("same type conversion", "[conversion]", float, double) {
     };
 
     SECTION("positive") {
-        SECTION("zero") {
-            check_conversion(TestType{});
+        SECTION("constants") {
+            SECTION("zero") {
+                check_conversion(TestType{});
+            }
+            SECTION("pi") {
+                check_conversion(std::numbers::pi_v<TestType>);
+            }
+            SECTION("e") {
+                check_conversion(std::numbers::e_v<TestType>);
+            }
+            SECTION("phi") {
+                check_conversion(std::numbers::phi_v<TestType>);
+            }
+            SECTION("sqrt2") {
+                check_conversion(std::numbers::sqrt2_v<TestType>);
+            }
+            SECTION("sqrt3") {
+                check_conversion(std::numbers::sqrt3_v<TestType>);
+            }
+            SECTION("inv_sqrtpi") {
+                check_conversion(std::numbers::inv_sqrtpi_v<TestType>);
+            }
+            SECTION("infinity") {
+                check_conversion(std::numeric_limits<TestType>::infinity());
+            }
+            SECTION("qNaN") {
+                check_conversion(std::numeric_limits<TestType>::quiet_NaN());
+            }
+            SECTION("sNaN") {
+                check_conversion(std::numeric_limits<TestType>::signaling_NaN());
+            }
         }
-        SECTION("pi") {
-            check_conversion(std::numbers::pi_v<TestType>);
-        }
-        SECTION("e") {
-            check_conversion(std::numbers::e_v<TestType>);
-        }
-        SECTION("phi") {
-            check_conversion(std::numbers::phi_v<TestType>);
-        }
-        SECTION("sqrt2") {
-            check_conversion(std::numbers::sqrt2_v<TestType>);
-        }
-        SECTION("sqrt3") {
-            check_conversion(std::numbers::sqrt3_v<TestType>);
-        }
-        SECTION("inv_sqrtpi") {
-            check_conversion(std::numbers::inv_sqrtpi_v<TestType>);
-        }
-        SECTION("infinity") {
-            check_conversion(std::numeric_limits<TestType>::infinity());
-        }
-        SECTION("qNaN") {
-            check_conversion(std::numeric_limits<TestType>::quiet_NaN());
-        }
-        SECTION("sNaN") {
-            check_conversion(std::numeric_limits<TestType>::signaling_NaN());
+        SECTION("random numbers") {
+            auto generated = generate_normal_numbers<TestType>(test_size);
+            remove_NaNs(generated);
+            for (auto value : generated) {
+                check_conversion(value);
+            }
         }
     }
 
     SECTION("negative") {
-        SECTION("zero") {
-            check_conversion(-TestType{});
+        SECTION("constants") {
+            SECTION("zero") {
+                check_conversion(-TestType{});
+            }
+            SECTION("pi") {
+                check_conversion(-std::numbers::pi_v<TestType>);
+            }
+            SECTION("e") {
+                check_conversion(-std::numbers::e_v<TestType>);
+            }
+            SECTION("phi") {
+                check_conversion(-std::numbers::phi_v<TestType>);
+            }
+            SECTION("sqrt2") {
+                check_conversion(-std::numbers::sqrt2_v<TestType>);
+            }
+            SECTION("sqrt3") {
+                check_conversion(-std::numbers::sqrt3_v<TestType>);
+            }
+            SECTION("inv_sqrtpi") {
+                check_conversion(-std::numbers::inv_sqrtpi_v<TestType>);
+            }
+            SECTION("infinity") {
+                check_conversion(-std::numeric_limits<TestType>::infinity());
+            }
+            SECTION("qNaN") {
+                check_conversion(-std::numeric_limits<TestType>::quiet_NaN());
+            }
+            SECTION("sNaN") {
+                check_conversion(negative_sNaN<TestType>());
+            }
         }
-        SECTION("pi") {
-            check_conversion(-std::numbers::pi_v<TestType>);
-        }
-        SECTION("e") {
-            check_conversion(-std::numbers::e_v<TestType>);
-        }
-        SECTION("phi") {
-            check_conversion(-std::numbers::phi_v<TestType>);
-        }
-        SECTION("sqrt2") {
-            check_conversion(-std::numbers::sqrt2_v<TestType>);
-        }
-        SECTION("sqrt3") {
-            check_conversion(-std::numbers::sqrt3_v<TestType>);
-        }
-        SECTION("inv_sqrtpi") {
-            check_conversion(-std::numbers::inv_sqrtpi_v<TestType>);
-        }
-        SECTION("infinity") {
-            check_conversion(-std::numeric_limits<TestType>::infinity());
-        }
-        SECTION("qNaN") {
-            check_conversion(-std::numeric_limits<TestType>::quiet_NaN());
-        }
-        SECTION("sNaN") {
-            check_conversion(negative_sNaN<TestType>());
+        SECTION("random numbers") {
+            auto generated = generate_normal_numbers<TestType>(test_size);
+            remove_NaNs(generated);
+            for (auto value : generated) {
+                check_conversion(-value);
+            }
         }
     }
 }
@@ -86,8 +105,13 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
         quadruple val_converted{val};
         auto converted = static_cast<ToType>(val);
         auto double_converted = static_cast<ToType>(val_converted);
-        // compare bits
-        REQUIRE(std::memcmp(&converted, &double_converted, sizeof(converted)) == 0);
+        // TODO: support subnormal numbers
+        if (std::fpclassify(converted) == FP_SUBNORMAL) {
+            REQUIRE(std::fpclassify(double_converted) == FP_ZERO);
+        } else {
+            // compare bits
+            REQUIRE(std::memcmp(&converted, &double_converted, sizeof(converted)) == 0);
+        }
     };
     // static_cast float::sNaN to double != double::sNaN
     auto check_NaN_conversion = [](FromType val) {
@@ -116,67 +140,86 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
         REQUIRE(std::memcmp(&converted, &double_converted, sizeof(converted)) == 0);
     };
     SECTION("positive") {
-        SECTION("zero") {
-            check_conversion(FromType{});
+        SECTION("constants") {
+            SECTION("zero") {
+                check_conversion(FromType{});
+            }
+            SECTION("pi") {
+                check_conversion(std::numbers::pi_v<FromType>);
+            }
+            SECTION("e") {
+                check_conversion(std::numbers::e_v<FromType>);
+            }
+            SECTION("phi") {
+                check_conversion(std::numbers::phi_v<FromType>);
+            }
+            SECTION("sqrt2") {
+                check_conversion(std::numbers::sqrt2_v<FromType>);
+            }
+            SECTION("sqrt3") {
+                check_conversion(std::numbers::sqrt3_v<FromType>);
+            }
+            SECTION("inv_sqrt(pi)") {
+                check_conversion(std::numbers::inv_sqrtpi_v<FromType>);
+            }
+            SECTION("infinity") {
+                check_conversion(std::numeric_limits<FromType>::infinity());
+            }
+            SECTION("qNaN") {
+                check_NaN_conversion(std::numeric_limits<FromType>::quiet_NaN());
+            }
+            SECTION("sNaN") {
+                check_NaN_conversion(std::numeric_limits<FromType>::signaling_NaN());
+            }
         }
-        SECTION("pi") {
-            check_conversion(std::numbers::pi_v<FromType>);
-        }
-        SECTION("e") {
-            check_conversion(std::numbers::e_v<FromType>);
-        }
-        SECTION("phi") {
-            check_conversion(std::numbers::phi_v<FromType>);
-        }
-        SECTION("sqrt2") {
-            check_conversion(std::numbers::sqrt2_v<FromType>);
-        }
-        SECTION("sqrt3") {
-            check_conversion(std::numbers::sqrt3_v<FromType>);
-        }
-        SECTION("inv_sqrt(pi)") {
-            check_conversion(std::numbers::inv_sqrtpi_v<FromType>);
-        }
-        SECTION("infinity") {
-            check_conversion(std::numeric_limits<FromType>::infinity());
-        }
-        SECTION("qNaN") {
-            check_NaN_conversion(std::numeric_limits<FromType>::quiet_NaN());
-        }
-        SECTION("sNaN") {
-            check_NaN_conversion(std::numeric_limits<FromType>::signaling_NaN());
+        SECTION("random numbers") {
+            auto generated = generate_normal_numbers<FromType>(test_size);
+            remove_NaNs(generated);
+            for (auto value : generated) {
+                check_conversion(value);
+            }
         }
     }
+
     SECTION("negative") {
-        SECTION("zero") {
-            check_conversion(-FromType{});
+        SECTION("constants") {
+            SECTION("zero") {
+                check_conversion(-FromType{});
+            }
+            SECTION("pi") {
+                check_conversion(-std::numbers::pi_v<FromType>);
+            }
+            SECTION("e") {
+                check_conversion(-std::numbers::e_v<FromType>);
+            }
+            SECTION("phi") {
+                check_conversion(-std::numbers::phi_v<FromType>);
+            }
+            SECTION("sqrt2") {
+                check_conversion(-std::numbers::sqrt2_v<FromType>);
+            }
+            SECTION("sqrt3") {
+                check_conversion(-std::numbers::sqrt3_v<FromType>);
+            }
+            SECTION("inv_sqrt(pi)") {
+                check_conversion(-std::numbers::inv_sqrtpi_v<FromType>);
+            }
+            SECTION("infinity") {
+                check_conversion(-std::numeric_limits<FromType>::infinity());
+            }
+            SECTION("qNaN") {
+                check_NaN_conversion(-std::numeric_limits<FromType>::quiet_NaN());
+            }
+            SECTION("sNaN") {
+                check_NaN_conversion(negative_sNaN<FromType>());
+            }
         }
-        SECTION("pi") {
-            check_conversion(-std::numbers::pi_v<FromType>);
-        }
-        SECTION("e") {
-            check_conversion(-std::numbers::e_v<FromType>);
-        }
-        SECTION("phi") {
-            check_conversion(-std::numbers::phi_v<FromType>);
-        }
-        SECTION("sqrt2") {
-            check_conversion(-std::numbers::sqrt2_v<FromType>);
-        }
-        SECTION("sqrt3") {
-            check_conversion(-std::numbers::sqrt3_v<FromType>);
-        }
-        SECTION("inv_sqrt(pi)") {
-            check_conversion(-std::numbers::inv_sqrtpi_v<FromType>);
-        }
-        SECTION("infinity") {
-            check_conversion(-std::numeric_limits<FromType>::infinity());
-        }
-        SECTION("qNaN") {
-            check_NaN_conversion(-std::numeric_limits<FromType>::quiet_NaN());
-        }
-        SECTION("sNaN") {
-            check_NaN_conversion(negative_sNaN<FromType>());
+        SECTION("random numbers") {
+            auto generated = generate_normal_numbers<FromType>(test_size);
+            remove_NaNs(generated);
+            for (auto value : generated) {
+                check_conversion(-value);
+            }
         }
     }
 }

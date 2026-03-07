@@ -2,6 +2,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "quadruple.hpp"
+#include "test_utils.hpp"
 
 TEST_CASE("equals", "[comparison]") {
     SECTION("signed zeros") {
@@ -112,41 +113,70 @@ TEMPLATE_TEST_CASE_SIG("less and derivatives", "[comparison]",
     (double, std::greater<>),
     (double, std::greater_equal<>)) {
 
-    std::vector<ValueType> values;
-    std::vector<quadruple> converted;
+    SECTION("constants") {
+        std::vector<ValueType> values;
+        std::vector<quadruple> converted;
 
-    // Fill vector
-    // zeros are equal no matter the sign, and NaN are not ordered, so they are absent from the test
-    values.emplace_back(ValueType{});
-    values.emplace_back(std::numbers::pi_v<ValueType>);
-    values.emplace_back(-std::numbers::pi_v<ValueType>);
-    values.emplace_back(std::numbers::e_v<ValueType>);
-    values.emplace_back(-std::numbers::e_v<ValueType>);
-    values.emplace_back(std::numbers::phi_v<ValueType>);
-    values.emplace_back(-std::numbers::phi_v<ValueType>);
-    values.emplace_back(std::numbers::sqrt2_v<ValueType>);
-    values.emplace_back(-std::numbers::sqrt2_v<ValueType>);
-    values.emplace_back(std::numbers::sqrt3_v<ValueType>);
-    values.emplace_back(-std::numbers::sqrt3_v<ValueType>);
-    values.emplace_back(std::numbers::inv_sqrtpi_v<ValueType>);
-    values.emplace_back(-std::numbers::inv_sqrtpi_v<ValueType>);
-    values.emplace_back(std::numeric_limits<ValueType>::infinity());
-    values.emplace_back(-std::numeric_limits<ValueType>::infinity());
-    for (auto value : values) {
-        converted.emplace_back(value);
+        // Fill vector
+        // zeros are equal no matter the sign, and NaN are not ordered, so they are absent from the test
+        values.emplace_back(ValueType{});
+        values.emplace_back(std::numbers::pi_v<ValueType>);
+        values.emplace_back(-std::numbers::pi_v<ValueType>);
+        values.emplace_back(std::numbers::e_v<ValueType>);
+        values.emplace_back(-std::numbers::e_v<ValueType>);
+        values.emplace_back(std::numbers::phi_v<ValueType>);
+        values.emplace_back(-std::numbers::phi_v<ValueType>);
+        values.emplace_back(std::numbers::sqrt2_v<ValueType>);
+        values.emplace_back(-std::numbers::sqrt2_v<ValueType>);
+        values.emplace_back(std::numbers::sqrt3_v<ValueType>);
+        values.emplace_back(-std::numbers::sqrt3_v<ValueType>);
+        values.emplace_back(std::numbers::inv_sqrtpi_v<ValueType>);
+        values.emplace_back(-std::numbers::inv_sqrtpi_v<ValueType>);
+        values.emplace_back(std::numeric_limits<ValueType>::infinity());
+        values.emplace_back(-std::numeric_limits<ValueType>::infinity());
+        converted.reserve(values.size());
+        for (auto value : values) {
+            converted.emplace_back(value);
+        }
+
+        // Sort both versions
+        ComparatorType comparator{};
+        std::sort(values.begin(), values.end(), comparator);
+        std::sort(converted.begin(), converted.end(), comparator);
+
+        // Compare results
+        for (size_t i = 0; i < values.size(); i++) {
+            ValueType converted_back{converted[i]};
+            REQUIRE(std::memcmp(&converted_back, &(values[i]), sizeof(ValueType)) == 0);
+            quadruple converted_value{values[i]};
+            REQUIRE(converted_value == converted[i]);
+            REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
+        }
     }
 
-    // Sort both versions
-    ComparatorType comparator{};
-    std::sort(values.begin(), values.end(), comparator);
-    std::sort(converted.begin(), converted.end(), comparator);
+    SECTION("random numbers") {
+        std::vector<ValueType> values = generate_normal_numbers<ValueType>(test_size);
+        // remove possible NaNs for proper sorting test
+        remove_NaNs(values);
+        std::vector<quadruple> converted;
 
-    // Compare results
-    for (size_t i = 0; i < values.size(); i++) {
-        ValueType converted_back{converted[i]};
-        REQUIRE(std::memcmp(&converted_back, &(values[i]), sizeof(ValueType)) == 0);
-        quadruple converted_value{values[i]};
-        REQUIRE(converted_value == converted[i]);
-        REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
+        converted.reserve(values.size());
+        for (auto value : values) {
+            converted.emplace_back(value);
+        }
+
+        // Sort both versions
+        ComparatorType comparator{};
+        std::sort(values.begin(), values.end(), comparator);
+        std::sort(converted.begin(), converted.end(), comparator);
+
+        // Compare results
+        for (size_t i = 0; i < values.size(); i++) {
+            ValueType converted_back{converted[i]};
+            REQUIRE(std::memcmp(&converted_back, &(values[i]), sizeof(ValueType)) == 0);
+            quadruple converted_value{values[i]};
+            REQUIRE(converted_value == converted[i]);
+            REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
+        }
     }
 }
