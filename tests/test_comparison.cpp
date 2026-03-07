@@ -3,10 +3,6 @@
 
 #include "quadruple.hpp"
 
-// There are some warnings emerged from Catch2 macros
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-
 TEST_CASE("equals", "[comparison]") {
     SECTION("signed zeros") {
         SECTION("+/+") {
@@ -154,5 +150,3 @@ TEMPLATE_TEST_CASE_SIG("less and derivatives", "[comparison]",
         REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
     }
 }
-
-#pragma GCC diagnostic pop

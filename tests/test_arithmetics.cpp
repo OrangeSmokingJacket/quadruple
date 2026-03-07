@@ -7,10 +7,6 @@
 
 #include "utils.hpp"
 
-// There are some warnings emerged from Catch2 macros
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-
 TEMPLATE_TEST_CASE("unary operators", "[arithmetics]", float, double) {
     auto check_plus = [](TestType val) {
         quadruple val_converted_1 = quadruple{+val};
@@ -412,5 +408,3 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
         }
     }
 }
-
-#pragma GCC diagnostic pop

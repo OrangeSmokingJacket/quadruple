@@ -5,10 +5,6 @@
 #include <cstring>
 #include <numbers>
 
-// There are some warnings emerged from Catch2 macros
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-
 TEMPLATE_TEST_CASE("same type conversion", "[conversion]", float, double) {
     auto check_conversion = [](TestType val) {
         quadruple val_converted{val};
@@ -184,5 +180,3 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
         }
     }
 }
-
-#pragma GCC diagnostic pop
