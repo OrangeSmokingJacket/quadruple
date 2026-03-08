@@ -31,14 +31,14 @@ namespace {
 
 template <>
 inline std::vector<float> generate_normal_numbers(size_t count) {
-    static constexpr uint32_t float_mantissa_mask = 0xFFFFFFFF;
+    static constexpr uint32_t float_mantissa_mask = 0x7FFFFFFF;
     std::mt19937 generator{};
     return generate_sequence<float, uint32_t, false>(generator, float_mantissa_mask, count);
 }
 
 template <>
 inline std::vector<double> generate_normal_numbers(size_t count) {
-    static constexpr uint64_t double_mantissa_mask = 0xFFFFFFFFFFFFFFFF;
+    static constexpr uint64_t double_mantissa_mask = 0x7FFFFFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<double, uint64_t, false>(generator, double_mantissa_mask, count);
 }
@@ -66,6 +66,10 @@ TEMPLATE_TEST_CASE("test utils", "[utils]", float, double) {
 
             // check that bits are the same
             REQUIRE(std::memcmp(first_gen.data(), second_gen.data(), sizeof(TestType) * test_size) == 0);
+            // all test values have to have the same sign
+            for (auto val : first_gen) {
+                REQUIRE_FALSE(std::signbit(val));
+            }
         }
         SECTION("subnormal") {
             auto first_gen = generate_subnormal_numbers<TestType>(test_size);
@@ -73,6 +77,10 @@ TEMPLATE_TEST_CASE("test utils", "[utils]", float, double) {
 
             // check that bits are the same
             REQUIRE(std::memcmp(first_gen.data(), second_gen.data(), sizeof(TestType) * test_size) == 0);
+            // all test values have to have the same sign
+            for (auto val : first_gen) {
+                REQUIRE_FALSE(std::signbit(val));
+            }
         }
     }
 }
