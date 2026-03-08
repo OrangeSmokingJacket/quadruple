@@ -15,6 +15,8 @@ constexpr size_t quadruple_mantissa_size = 112;
 
 constexpr uint16_t float_exponent_filler = 0b0011111110000000;
 constexpr uint16_t double_exponent_filler = 0b0011110000000000;
+constexpr uint16_t float_subnormal_exponent_filler =  0b0011111110000001;
+constexpr uint16_t double_subnormal_exponent_filler = 0b0011110000000001;
 
 constexpr uint32_t float_exponent_max_mask = 0b01111111100000000000000000000000;
 constexpr uint32_t float_exponent_min_mask = ~float_exponent_max_mask;
