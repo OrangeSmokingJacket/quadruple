@@ -179,4 +179,28 @@ TEMPLATE_TEST_CASE_SIG("less and derivatives", "[comparison]",
             REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
         }
     }
+
+    SECTION("random subnormal numbers") {
+        std::vector<ValueType> values = generate_subnormal_numbers<ValueType>(test_size);
+        std::vector<quadruple> converted;
+
+        converted.reserve(values.size());
+        for (auto value : values) {
+            converted.emplace_back(value);
+        }
+
+        // Sort both versions
+        ComparatorType comparator{};
+        std::sort(values.begin(), values.end(), comparator);
+        std::sort(converted.begin(), converted.end(), comparator);
+
+        // Compare results
+        for (size_t i = 0; i < values.size(); i++) {
+            ValueType converted_back{converted[i]};
+            REQUIRE(std::memcmp(&converted_back, &(values[i]), sizeof(ValueType)) == 0);
+            quadruple converted_value{values[i]};
+            REQUIRE(converted_value == converted[i]);
+            REQUIRE(std::memcmp(&converted_value, &(converted[i]), sizeof(quadruple)) == 0);
+        }
+    }
 }
