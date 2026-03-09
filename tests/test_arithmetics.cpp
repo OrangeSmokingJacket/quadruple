@@ -70,6 +70,13 @@ TEMPLATE_TEST_CASE("unary operators", "[arithmetics]", float, double) {
                 check_minus(value);
             }
         }
+        SECTION("random subnormal numbers") {
+            auto generated = generate_subnormal_numbers<TestType>(test_size);
+            for (auto value : generated) {
+                check_plus(value);
+                check_minus(value);
+            }
+        }
     }
     SECTION("negative") {
         SECTION("constants") {
@@ -112,6 +119,13 @@ TEMPLATE_TEST_CASE("unary operators", "[arithmetics]", float, double) {
         }
         SECTION("random numbers") {
             auto generated = generate_normal_numbers<TestType>(test_size);
+            for (auto value : generated) {
+                check_plus(-value);
+                check_minus(-value);
+            }
+        }
+        SECTION("random subnormal numbers") {
+            auto generated = generate_subnormal_numbers<TestType>(test_size);
             for (auto value : generated) {
                 check_plus(-value);
                 check_minus(-value);
@@ -191,6 +205,12 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
                 check_addition(value);
             }
         }
+        SECTION("random subnormal numbers") {
+            auto generated = generate_subnormal_numbers<TestType>(test_size);
+            for (auto value : generated) {
+                check_addition(value);
+            }
+        }
     }
 
     SECTION("negative") {
@@ -223,6 +243,12 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
         SECTION("random numbers") {
             auto generated = generate_normal_numbers<TestType>(test_size);
             remove_NaNs(generated);
+            for (auto value : generated) {
+                check_addition(-value);
+            }
+        }
+        SECTION("random subnormal numbers") {
+            auto generated = generate_subnormal_numbers<TestType>(test_size);
             for (auto value : generated) {
                 check_addition(-value);
             }
@@ -271,6 +297,13 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
         SECTION("random numbers") {
             auto generated = generate_normal_numbers<TestType>(test_size);
             remove_NaNs(generated);
+            for (auto value : generated) {
+                check_addition_opposites(value);
+                check_addition_opposites(-value);
+            }
+        }
+        SECTION("random subnormal numbers") {
+            auto generated = generate_subnormal_numbers<TestType>(test_size);
             for (auto value : generated) {
                 check_addition_opposites(value);
                 check_addition_opposites(-value);
@@ -370,6 +403,12 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
                     check_subtraction_same(value);
                 }
             }
+            SECTION("random subnormal numbers") {
+                auto generated = generate_subnormal_numbers<TestType>(test_size);
+                for (auto value : generated) {
+                    check_subtraction_same(value);
+                }
+            }
         }
 
         SECTION("negative") {
@@ -405,6 +444,12 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
                 remove_NaNs(generated);
+                for (auto value : generated) {
+                    check_subtraction_same(-value);
+                }
+            }
+            SECTION("random subnormal numbers") {
+                auto generated = generate_subnormal_numbers<TestType>(test_size);
                 for (auto value : generated) {
                     check_subtraction_same(-value);
                 }
@@ -450,6 +495,12 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
                     check_subtraction_different(value);
                 }
             }
+            SECTION("random subnormal numbers") {
+                auto generated = generate_subnormal_numbers<TestType>(test_size);
+                for (auto value : generated) {
+                    check_subtraction_different(value);
+                }
+            }
         }
         SECTION("negative") {
             SECTION("constants") {
@@ -484,6 +535,12 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
                 remove_NaNs(generated);
+                for (auto value : generated) {
+                    check_subtraction_different(-value);
+                }
+            }
+            SECTION("random subnormal numbers") {
+                auto generated = generate_subnormal_numbers<TestType>(test_size);
                 for (auto value : generated) {
                     check_subtraction_different(-value);
                 }
