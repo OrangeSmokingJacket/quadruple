@@ -1,5 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include "test_utils.hpp"
+#include "quadruple.hpp"
+#include <random>
 
 namespace {
     template <typename T, typename U>
@@ -27,6 +29,30 @@ namespace {
         }
         return result;
     }
+
+    template <bool allow_subnormals, typename Generator>
+    std::vector<quadruple> generate_sequence(Generator& generator, uint64_t mask, size_t count) {
+        std::array<std::byte, sizeof(quadruple)> bits;
+
+        std::vector<quadruple> result;
+        result.reserve(count);
+        for (size_t i = 0; i < count; i++) {
+            if constexpr (!allow_subnormals) {
+                quadruple val;
+                do {
+                    *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator()) & mask;
+                    *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator());
+                    val = std::bit_cast<quadruple>(bits);
+                } while (val.is_subnormal());
+                result.emplace_back(val);
+            } else {
+                *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator()) & mask;
+                *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator());
+                result.emplace_back(std::bit_cast<quadruple>(bits));
+            }
+        }
+        return result;
+    }
 }
 
 template <>
@@ -44,6 +70,15 @@ inline std::vector<double> generate_normal_numbers(size_t count) {
 }
 
 template <>
+std::vector<quadruple> generate_normal_numbers<quadruple>(size_t count) {
+    // TODO: this is an issue with quadruple bit order
+    // mask is suppose to be 0x7FFFFFFFFFFFFFFF
+    static constexpr uint64_t quadruple_upper_mask = 0xFFFFFFFFFFFF7FFF;
+    std::mt19937_64 generator{};
+    return generate_sequence<false>(generator, quadruple_upper_mask, count);
+}
+
+template <>
 inline std::vector<float> generate_subnormal_numbers(size_t count) {
     static constexpr uint32_t float_mantissa_mask = 0x007FFFFF;
     std::mt19937 generator{};
@@ -52,12 +87,42 @@ inline std::vector<float> generate_subnormal_numbers(size_t count) {
 
 template <>
 inline std::vector<double> generate_subnormal_numbers(size_t count) {
-    static constexpr uint64_t double_mantissa_mask = 0x000FFFFFFFFFFFFF;
+    static constexpr uint64_t double_mantissa_mask = 0x0000FFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<double, uint64_t, true>(generator, double_mantissa_mask, count);
 }
 
-TEMPLATE_TEST_CASE("test utils", "[utils]", float, double) {
+template <>
+std::vector<quadruple> generate_subnormal_numbers<quadruple>(size_t count) {
+    // TODO: this is an issue with quadruple bit order
+    // mask is suppose to be 0x0000FFFFFFFFFFFF
+    static constexpr uint64_t quadruple_upper_mask = 0xFFFFFFFFFFFF0000;
+    std::mt19937_64 generator{};
+    return generate_sequence<true>(generator, quadruple_upper_mask, count);}
+
+template <>
+void remove_NaNs<quadruple>(std::vector<quadruple>& vector) {
+    for (auto it = vector.begin(); it != vector.end();) {
+        if (it->is_NaN()) {
+            vector.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+// just for "test utils" test
+template <typename T>
+bool is_negative(T val) {
+    return std::signbit(val);
+}
+
+template <>
+bool is_negative(quadruple val) {
+    return val.signbit();
+}
+
+TEMPLATE_TEST_CASE("test utils", "[utils]", float, double, quadruple) {
 
     SECTION("test repeatability") {
         SECTION("normal") {
@@ -68,7 +133,7 @@ TEMPLATE_TEST_CASE("test utils", "[utils]", float, double) {
             REQUIRE(std::memcmp(first_gen.data(), second_gen.data(), sizeof(TestType) * test_size) == 0);
             // all test values have to have the same sign
             for (auto val : first_gen) {
-                REQUIRE_FALSE(std::signbit(val));
+                REQUIRE_FALSE(is_negative(val));
             }
         }
         SECTION("subnormal") {
@@ -79,7 +144,7 @@ TEMPLATE_TEST_CASE("test utils", "[utils]", float, double) {
             REQUIRE(std::memcmp(first_gen.data(), second_gen.data(), sizeof(TestType) * test_size) == 0);
             // all test values have to have the same sign
             for (auto val : first_gen) {
-                REQUIRE_FALSE(std::signbit(val));
+                REQUIRE_FALSE(is_negative(val));
             }
         }
     }
