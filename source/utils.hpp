@@ -2,9 +2,13 @@
 #include <bit>
 #include <cstdint>
 #include <bitset>
-#include <cmath>
-#include <cstring>
 #include <type_traits>
+
+#ifdef DIMPLICIT_CASTS
+#define OPTIONAL_EXPLICIT()
+#else
+#define OPTIONAL_EXPLICIT() explicit
+#endif
 
 constexpr size_t float_exponent_size = 8;
 constexpr size_t double_exponent_size = 11;

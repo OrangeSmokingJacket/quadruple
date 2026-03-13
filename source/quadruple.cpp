@@ -4,6 +4,8 @@
 #include <bit>
 #include <cassert>
 #include <cfenv>
+#include <cmath>
+#include <cstring>
 
 static_assert(sizeof(quadruple) == 16);
 static_assert(alignof(quadruple) == 8);

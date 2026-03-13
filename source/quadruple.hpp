@@ -4,12 +4,6 @@
 
 #include "utils.hpp"
 
-#ifdef DIMPLICIT_CASTS
-#define OPTIONAL_EXPLICIT()
-#else
-#define OPTIONAL_EXPLICIT() explicit
-#endif
-
 // TODO: constexpr
 
 // Designed to fit IEEE 754 standard
