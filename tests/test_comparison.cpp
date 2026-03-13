@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "quadruple.hpp"
-#include "test_utils.hpp"
+#include "test_helpers/test_utils.hpp"
 
 TEST_CASE("equals", "[comparison]") {
     SECTION("signed zeros") {

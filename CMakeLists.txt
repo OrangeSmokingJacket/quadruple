@@ -18,7 +18,7 @@ message(STATUS "ARCH : ${CMAKE_SYSTEM_NAME}")
 option(ENABLE_IMPLICIT_CASTS "enable implicit casts to and from quadruple" OFF)
 option(ENABLE_TESTS "use tests" ON)
 option(ENABLE_ASAN "use address sanitizer" OFF)
-option(ENABLE_BENCHMARKS "use benchmarks" OFF)
+option(ENABLE_BENCHMARKS "use benchmarks" ON)
 
 if (ENABLE_IMPLICIT_CASTS)
     message("Implicit casts are allowed")
@@ -86,4 +86,8 @@ add_subdirectory(source)
 
 if (ENABLE_TESTS)
     add_subdirectory(tests)
+endif ()
+
+if (ENABLE_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif ()

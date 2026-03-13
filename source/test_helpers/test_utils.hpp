@@ -1,8 +1,10 @@
 #pragma once
+#include <cmath>
 #include <vector>
 
 class quadruple;
 
+static constexpr size_t benchmark_size = 10000;
 // TODO: increase to million or bigger
 static constexpr size_t test_size = 10000;
 
