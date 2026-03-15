@@ -17,25 +17,35 @@ constexpr size_t float_mantissa_size = 23;
 constexpr size_t double_mantissa_size = 52;
 constexpr size_t quadruple_mantissa_size = 112;
 
-constexpr uint16_t float_exponent_filler = 0b0011111110000000;
-constexpr uint16_t double_exponent_filler = 0b0011110000000000;
-constexpr uint16_t float_subnormal_exponent_filler =  0b0011111110000001;
-constexpr uint16_t double_subnormal_exponent_filler = 0b0011110000000001;
-
 constexpr uint32_t float_exponent_max_mask = 0b01111111100000000000000000000000;
 constexpr uint32_t float_exponent_min_mask = ~float_exponent_max_mask;
 constexpr uint64_t double_exponent_max_mask = 0b0111111111110000000000000000000000000000000000000000000000000000;
 constexpr uint64_t double_exponent_min_mask = ~double_exponent_max_mask;
-constexpr uint16_t quadruple_exponent_min = 0b0000000000000000;
-constexpr uint16_t quadruple_exponent_max = 0b0111111111111111;
 
 constexpr uint64_t float_mantissa_mask = (uint64_t{1} << float_mantissa_size) - 1;
 constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) - 1;
 
-constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
-constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
-constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
-constexpr uint16_t min_double_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (double_exponent_size - 1)) + 1;
+// new
+namespace exponent_values {
+    constexpr uint16_t quadruple_exponent_min = 0b0000000000000000;
+    constexpr uint16_t quadruple_exponent_max = 0b0111111111111111;
+    constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
+    constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
+    constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
+    constexpr uint16_t min_double_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (double_exponent_size - 1)) + 1;
+} // namespace exponent_values
+
+constexpr uint64_t float_exponent_filler = 0x3F80000000000000;
+constexpr uint64_t double_exponent_filler = 0x3C00000000000000;
+constexpr uint64_t float_subnormal_exponent_filler =  0x3F81000000000000;
+constexpr uint64_t double_subnormal_exponent_filler = 0x3C01000000000000;
+
+constexpr uint64_t upper_mantissa_mask = 0x0000FFFFFFFFFFFF;
+constexpr uint64_t sign_bit_mask = 0x8000000000000000;
+constexpr uint64_t sign_bits_mask = 0xC000000000000000;
+
+constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
+constexpr uint64_t quadruple_exponent_min = 0;
 
 // mantissa_calc
 constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
@@ -70,28 +80,8 @@ constexpr T single_bit_mask() noexcept{
 }
 
 template <Unsigned T>
-constexpr T value_sing_mask() noexcept {
+constexpr T value_sign_mask() noexcept {
     return single_bit_mask<T, 0>();
-}
-
-template <Unsigned T>
-constexpr T exponent_sing_mask() noexcept {
-    return single_bit_mask<T, 1>();
-}
-
-template <Unsigned T>
-constexpr T sign_bits_mask() noexcept {
-    return value_sing_mask<T>() | exponent_sing_mask<T>();
-}
-
-template <Unsigned T>
-constexpr T invert_bit_mask(T mask) noexcept {
-    return static_cast<T>(~mask);
-}
-
-template <Unsigned T>
-constexpr void copy_sign_bits(T& dest, T source) noexcept {
-    dest |= static_cast<T>(source & sign_bits_mask<T>());
 }
 
 template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
@@ -100,26 +90,15 @@ constexpr bool is_bit_set(T value) noexcept {
 }
 
 template <Unsigned T>
-constexpr bool is_exponent_sing_bit_set(T value) noexcept {
-    return (value & exponent_sing_mask<T>()) != 0;
+constexpr bool is_exponent_sign_bit_set(T value) noexcept {
+    return (value & single_bit_mask<T, 1>()) != 0;
 }
 
-template <Unsigned T, Unsigned U>
-constexpr void copy_sign_bits(T& dest, U source) noexcept {
-    if constexpr (sizeof(T) == sizeof(U)) {
-        dest |= source & sign_bits_mask<U>();
-    } else if constexpr (sizeof(T) > sizeof(U)) {
-        dest |= static_cast<T>(source & sign_bits_mask<U>()) << (sizeof(T) - sizeof(U)) * 8;
-    } else {
-        dest |= static_cast<T>((source & sign_bits_mask<U>()) >> (sizeof(U) - sizeof(T)) * 8);
-    }
+constexpr uint16_t exponent_to_uint16(uint64_t exponent_value) noexcept {
+    return static_cast<uint16_t>((exponent_value & ~single_bit_mask<uint64_t, 0>()) >> ((sizeof(uint64_t) - sizeof(uint16_t)) * 8));
 }
 
-constexpr uint16_t exponent_to_uint16(uint16_t exponent_value) noexcept {
-    return exponent_value & invert_bit_mask(single_bit_mask<uint16_t, 0>());
-}
-
-constexpr int exponent_difference(uint16_t lhs, uint16_t rhs) noexcept {
+constexpr int exponent_difference(uint64_t lhs, uint64_t rhs) noexcept {
     return exponent_to_uint16(lhs) - exponent_to_uint16(rhs);
 }
 

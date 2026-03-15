@@ -36,6 +36,7 @@ public:
     static quadruple signaling_NaN() noexcept;
     static quadruple negative_signaling_NaN() noexcept;
     static quadruple infinity() noexcept;
+    static quadruple negative_infinity() noexcept;
 
     // does not raise FE_INVALID for signaling NaN
     quadruple& flip_sign() noexcept;
@@ -54,17 +55,15 @@ public:
 
 private:
     // data
-    uint16_t exponent_{0};
-    uint16_t mantissa1_{0};
-    uint32_t mantissa2_{0};
-    uint64_t mantissa3_{0};
+    uint64_t lower_{0};
+    uint64_t upper_{0};
 
     // helpers
-    quadruple(uint16_t exponent, uint16_t mantissa1, uint32_t mantissa2, uint64_t mantissa3) noexcept;
+    quadruple(uint64_t upper, uint64_t lower) noexcept;
 
     struct mantissa_calc {
-        uint64_t upper{0};
         uint64_t lower{0};
+        uint64_t upper{0};
 
         bool is_zero() const noexcept;
         [[nodiscard]] int most_significant_bit_position() const noexcept;
