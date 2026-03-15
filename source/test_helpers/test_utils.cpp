@@ -40,14 +40,14 @@ namespace {
             if constexpr (!allow_subnormals) {
                 quadruple val;
                 do {
-                    *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator()) & mask;
-                    *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator());
+                    *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator());
+                    *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator()) & mask;
                     val = std::bit_cast<quadruple>(bits);
                 } while (val.is_subnormal());
                 result.emplace_back(val);
             } else {
-                *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator()) & mask;
-                *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator());
+                *reinterpret_cast<uint64_t*>(&bits[0]) = static_cast<uint64_t>(generator());
+                *reinterpret_cast<uint64_t*>(&bits[8]) = static_cast<uint64_t>(generator()) & mask;
                 result.emplace_back(std::bit_cast<quadruple>(bits));
             }
         }
@@ -71,9 +71,7 @@ std::vector<double> generate_normal_numbers(size_t count) {
 
 template <>
 std::vector<quadruple> generate_normal_numbers<quadruple>(size_t count) {
-    // TODO: this is an issue with quadruple bit order
-    // mask is suppose to be 0x7FFFFFFFFFFFFFFF
-    static constexpr uint64_t quadruple_upper_mask = 0xFFFFFFFFFFFF7FFF;
+    static constexpr uint64_t quadruple_upper_mask = 0x7FFFFFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<false>(generator, quadruple_upper_mask, count);
 }
@@ -94,9 +92,7 @@ std::vector<double> generate_subnormal_numbers(size_t count) {
 
 template <>
 std::vector<quadruple> generate_subnormal_numbers<quadruple>(size_t count) {
-    // TODO: this is an issue with quadruple bit order
-    // mask is suppose to be 0x0000FFFFFFFFFFFF
-    static constexpr uint64_t quadruple_upper_mask = 0xFFFFFFFFFFFF0000;
+    static constexpr uint64_t quadruple_upper_mask = 0x0000FFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<true>(generator, quadruple_upper_mask, count);}
 
