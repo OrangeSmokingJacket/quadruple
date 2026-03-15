@@ -115,14 +115,14 @@ quadruple::quadruple(double value) noexcept {
      // handle edge cases (max and min exponent is not a power of 2)
     if ((flat_value & double_exponent_max_mask) == double_exponent_max_mask) {
         exponent_val = quadruple_exponent_max;
-        if ((flat_value & single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
-            exponent_val |= single_bit_mask<uint64_t, 0>();
+        if ((flat_value & sign_bit_mask) == sign_bit_mask) {
+            exponent_val |= sign_bit_mask;
         }
     } else if ((flat_value | double_exponent_min_mask) == double_exponent_min_mask) {
         if (mantissa_val1 == 0 && mantissa_val2 == 0) {
             exponent_val = quadruple_exponent_min;
-            if ((flat_value & single_bit_mask<uint64_t, 0>()) == single_bit_mask<uint64_t, 0>()) {
-                exponent_val |= single_bit_mask<uint64_t, 0>();
+            if ((flat_value & sign_bit_mask) == sign_bit_mask) {
+                exponent_val |= sign_bit_mask;
             }
         } else {
             mantissa_calc mantissa{mantissa_val2, mantissa_val1};
@@ -189,10 +189,6 @@ quadruple::operator float() const noexcept {
     bool requires_round = false;
     if ((exponent_val & quadruple_exponent_max) == quadruple_exponent_max) {
         float_bits = float_exponent_max_mask;
-        if (signbit()) {
-            float_bits |= single_bit_mask<uint32_t, 0>();
-        }
-    } else if ((exponent_val | sign_bit_mask) == sign_bit_mask) {
         if (signbit()) {
             float_bits |= single_bit_mask<uint32_t, 0>();
         }
@@ -281,11 +277,7 @@ quadruple::operator double() const noexcept {
     if ((exponent_val & quadruple_exponent_max) == quadruple_exponent_max) {
         double_bits = double_exponent_max_mask;
         if (signbit()) {
-            double_bits |= single_bit_mask<uint64_t, 0>();
-        }
-    } else if ((exponent_val | single_bit_mask<uint16_t, 0>()) == single_bit_mask<uint16_t, 0>()) {
-        if (signbit()) {
-            double_bits |= single_bit_mask<uint64_t, 0>();
+            double_bits |= sign_bit_mask;
         }
     } else {
         auto numeric_exponent = exponent_to_uint16(exponent_val);
@@ -293,7 +285,7 @@ quadruple::operator double() const noexcept {
             return signbit() ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
         } else if (numeric_exponent <= exponent_values::min_double_exponent) {
             if (signbit()) {
-                double_bits |= single_bit_mask<uint64_t, 0>();
+                double_bits |= sign_bit_mask;
             }
             forced_round = true;
             size_t adj = exponent_values::min_double_exponent - numeric_exponent + 1;
@@ -325,12 +317,11 @@ quadruple::operator double() const noexcept {
     // combine
     double_bits |= mantissa_val;
 
-    // TODO: after shifting mantissa with subnormal numbers, other bit has to be used
     auto result = std::bit_cast<double>(double_bits);
     if ((forced_round && requires_round) ||
         (!forced_round &&
          is_bit_set<decltype(lower_), quadruple_exponent_size - double_exponent_size>(lower_) &&
-         (double_bits | single_bit_mask<uint64_t, 0>()) != single_bit_mask<uint64_t, 0>())) {
+         (double_bits | sign_bit_mask) != sign_bit_mask)) {
         if (is_bit_set<decltype(double_bits), 0>(double_bits)) {
             return std::nextafter(result, -std::numeric_limits<double>::infinity());
         } else {
@@ -389,6 +380,14 @@ quadruple quadruple::infinity() noexcept {
 
 quadruple quadruple::negative_infinity() noexcept {
     return {0xFFFF000000000000, 0};
+}
+
+quadruple quadruple::max() noexcept {
+    return {0x7FFEFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF};
+}
+
+quadruple quadruple::min() noexcept {
+    return {0x0001000000000000, 0};
 }
 
 quadruple& quadruple::flip_sign() noexcept {
@@ -462,7 +461,6 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
         return rhs;
     }
 
-    // TODO: this will fail with subnormal numbers
     auto lhs_mantissa = convert_mantissa();
     auto rhs_mantissa = rhs.convert_mantissa();
     auto exp_diff = exponent_difference(upper_, rhs.upper_);
@@ -484,11 +482,16 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
     int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
-    res_mantissa.normalize(exponent_adj);
-    res_mantissa.upper &= upper_mantissa_mask;
     auto adjusted_exponent = static_cast<uint64_t>(exponent_to_uint16(upper_) + static_cast<int16_t>(exponent_adj));
+    if (adjusted_exponent == std::numeric_limits<uint64_t>::max()) {
+        auto res = quadruple{res_mantissa.upper, res_mantissa.lower};
+        if (this_sign) {
+            res.upper_ |= sign_bit_mask;
+        }
+        return res;
+    }
     adjusted_exponent <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
-    if ((adjusted_exponent & single_bit_mask<uint64_t, 0>()) != 0) {
+    if ((adjusted_exponent & sign_bit_mask) != 0) {
         // exponent overflow
         if (this_sign) {
             return -infinity();
@@ -496,10 +499,14 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
             return infinity();
         }
     }
+    res_mantissa.normalize(exponent_adj);
+    if (adjusted_exponent != 0) {
+        res_mantissa.upper &= upper_mantissa_mask;
+    }
 
     auto res = quadruple{adjusted_exponent | res_mantissa.upper, res_mantissa.lower};
     if (this_sign) {
-        res.upper_ |= single_bit_mask<uint64_t, 0>();
+        res.upper_ |= sign_bit_mask;
     }
     return res;
 }
@@ -536,7 +543,6 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
         return rhs;
     }
 
-    // TODO: this will fail with subnormal numbers
     auto lhs_mantissa = convert_mantissa();
     auto rhs_mantissa = rhs.convert_mantissa();
     auto exp_diff = exponent_difference(upper_, rhs.upper_);
@@ -562,16 +568,21 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
     int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
-    res_mantissa.normalize(exponent_adj);
-    res_mantissa.upper &= upper_mantissa_mask;
     uint64_t adjusted_exponent;
     if (flipped_sign) {
         adjusted_exponent = static_cast<uint64_t>(exponent_to_uint16(rhs.upper_) + static_cast<int16_t>(exponent_adj));
     } else {
         adjusted_exponent = static_cast<uint64_t>(exponent_to_uint16(upper_) + static_cast<int16_t>(exponent_adj));
     }
+    if (adjusted_exponent == std::numeric_limits<uint64_t>::max()) {
+        auto res = quadruple{res_mantissa.upper, res_mantissa.lower};
+        if (this_sign) {
+            res.upper_ |= sign_bit_mask;
+        }
+        return res;
+    }
     adjusted_exponent <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
-    if ((adjusted_exponent & single_bit_mask<uint64_t, 0>()) != 0) {
+    if ((adjusted_exponent & sign_bit_mask) != 0) {
         // exponent overflow
         if (this_sign) {
             return -infinity();
@@ -579,12 +590,24 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
             return infinity();
         }
     }
+    res_mantissa.normalize(exponent_adj);
+    res_mantissa.upper &= upper_mantissa_mask;
 
     auto res = quadruple{adjusted_exponent | res_mantissa.upper, res_mantissa.lower};
     if (this_sign) {
-        res.upper_ |= single_bit_mask<uint64_t, 0>();
+        res.upper_ |= sign_bit_mask;
     }
     return res;
+}
+
+quadruple& quadruple::operator+=(const quadruple& rhs) {
+    *this = *this + rhs;
+    return *this;
+}
+
+quadruple& quadruple::operator-=(const quadruple& rhs) {
+    *this = *this - rhs;
+    return *this;
 }
 
 bool quadruple::operator==(const quadruple& rhs) const noexcept {

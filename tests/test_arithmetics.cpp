@@ -563,3 +563,57 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
         }
     }
 }
+
+TEST_CASE("quadruple subnormals", "[arithmetics]") {
+    SECTION("subnormal to normal") {
+        quadruple sub_normal1{};
+        quadruple sub_normal2{};
+
+        // equivalent to 0x0000FFFFFFFFFFFF FFFFFFFFFFFFFFFF
+        std::memset(reinterpret_cast<char*>(&sub_normal1), 255, 14);
+        // equivalent to 0x0000000000000000 0000000000000001
+        std::memset(reinterpret_cast<char*>(&sub_normal2), 1, 1);
+
+        quadruple res = sub_normal1 + sub_normal2;
+        REQUIRE(!res.is_subnormal());
+        REQUIRE(res == quadruple::min());
+    }
+    SECTION("normal to subnormal") {
+        quadruple normal = quadruple::min();
+        quadruple sub_normal{};
+
+        SECTION("too small to affect") {
+            // equivalent to 0x0000000000000000 0000000000000001
+            std::memset(reinterpret_cast<char*>(&sub_normal), 1, 1);
+
+            quadruple res = normal - sub_normal;
+            REQUIRE(!res.is_subnormal());
+            REQUIRE(res == normal);
+        }
+        SECTION("proper subnormal") {
+            // equivalent to 0x0000000000000000 0000000000000002
+            std::memset(reinterpret_cast<char*>(&sub_normal), 2, 1);
+
+            quadruple res = normal - sub_normal;
+            REQUIRE(res.is_subnormal());
+            REQUIRE(res < quadruple::min());
+        }
+    }
+    SECTION("subnormal to subnormal") {
+        quadruple sub_normal1{};
+        quadruple sub_normal2{};
+
+        // equivalent to 0x0000FFFFFFFFFFFF FFFFFFFFFFFFFFFF
+        std::memset(reinterpret_cast<char*>(&sub_normal1), 255, 14);
+        // equivalent to 0x0000000000000000 0000000000000001
+        std::memset(reinterpret_cast<char*>(&sub_normal2), 1, 1);
+
+        quadruple res = sub_normal1 - sub_normal2;
+        REQUIRE(res.is_subnormal());
+        REQUIRE(res < sub_normal1);
+
+        res += sub_normal2;
+        REQUIRE(res.is_subnormal());
+        REQUIRE(res == sub_normal1);
+    }
+}

@@ -17,18 +17,17 @@ constexpr size_t float_mantissa_size = 23;
 constexpr size_t double_mantissa_size = 52;
 constexpr size_t quadruple_mantissa_size = 112;
 
-constexpr uint32_t float_exponent_max_mask = 0b01111111100000000000000000000000;
+constexpr uint32_t float_exponent_max_mask = 0x7F800000;
 constexpr uint32_t float_exponent_min_mask = ~float_exponent_max_mask;
-constexpr uint64_t double_exponent_max_mask = 0b0111111111110000000000000000000000000000000000000000000000000000;
+constexpr uint64_t double_exponent_max_mask = 0x7FF0000000000000;
 constexpr uint64_t double_exponent_min_mask = ~double_exponent_max_mask;
 
 constexpr uint64_t float_mantissa_mask = (uint64_t{1} << float_mantissa_size) - 1;
 constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) - 1;
 
-// new
 namespace exponent_values {
-    constexpr uint16_t quadruple_exponent_min = 0b0000000000000000;
-    constexpr uint16_t quadruple_exponent_max = 0b0111111111111111;
+    constexpr uint16_t quadruple_exponent_min = 0;
+    constexpr uint16_t quadruple_exponent_max = 0x7FFF;
     constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
     constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
     constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;

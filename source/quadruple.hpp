@@ -37,6 +37,8 @@ public:
     static quadruple negative_signaling_NaN() noexcept;
     static quadruple infinity() noexcept;
     static quadruple negative_infinity() noexcept;
+    static quadruple max() noexcept;
+    static quadruple min() noexcept;
 
     // does not raise FE_INVALID for signaling NaN
     quadruple& flip_sign() noexcept;
@@ -45,6 +47,8 @@ public:
     quadruple operator-() const;
     quadruple operator+(const quadruple& rhs) const;
     quadruple operator-(const quadruple& rhs) const;
+    quadruple& operator+=(const quadruple& rhs);
+    quadruple& operator-=(const quadruple& rhs);
 
     bool operator==(const quadruple& rhs) const noexcept;
     bool operator!=(const quadruple& rhs) const noexcept;

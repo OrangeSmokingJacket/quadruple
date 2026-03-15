@@ -250,3 +250,24 @@ TEMPLATE_TEST_CASE_SIG("different type conversion", "[conversion]",
         }
     }
 }
+
+TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion]", float, double) {
+    auto check_conversion = [](quadruple val) {
+        TestType converted{val};
+        REQUIRE(std::fpclassify(converted) == FP_ZERO);
+    };
+
+    auto generated = generate_subnormal_numbers<quadruple>(test_size);
+
+    SECTION("positive") {
+        for (auto val : generated) {
+            check_conversion(val);
+        }
+    }
+
+    SECTION("negative") {
+        for (auto val : generated) {
+            check_conversion(-val);
+        }
+    }
+}
