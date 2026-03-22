@@ -6,6 +6,7 @@ set(SOURCE_${PROJECT_NAME}
 set(HEADERS_${PROJECT_NAME}
         quadruple.hpp
         utils.hpp
+        ub_consistency.hpp
 )
 
 if (ENABLE_TESTS OR ENABLE_BENCHMARKS)

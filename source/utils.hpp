@@ -26,8 +26,9 @@ constexpr uint64_t float_mantissa_mask = (uint64_t{1} << float_mantissa_size) - 
 constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) - 1;
 
 namespace exponent_values {
-    constexpr uint16_t quadruple_exponent_min = 0;
     constexpr uint16_t quadruple_exponent_max = 0x7FFF;
+    constexpr uint16_t quadruple_exponent_min = 0;
+    constexpr uint16_t quadruple_exponent_zero = 0x3FFF;
     constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
     constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
     constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
@@ -40,11 +41,13 @@ constexpr uint64_t float_subnormal_exponent_filler =  0x3F81000000000000;
 constexpr uint64_t double_subnormal_exponent_filler = 0x3C01000000000000;
 
 constexpr uint64_t upper_mantissa_mask = 0x0000FFFFFFFFFFFF;
+constexpr uint64_t implied_bit_mask = 0x0001000000000000;
 constexpr uint64_t sign_bit_mask = 0x8000000000000000;
 constexpr uint64_t sign_bits_mask = 0xC000000000000000;
 
 constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
 constexpr uint64_t quadruple_exponent_min = 0;
+constexpr uint64_t quadruple_exponent_zero = 0x3FFF000000000000;
 
 // mantissa_calc
 constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
@@ -91,6 +94,18 @@ constexpr bool is_bit_set(T value) noexcept {
 template <Unsigned T>
 constexpr bool is_exponent_sign_bit_set(T value) noexcept {
     return (value & single_bit_mask<T, 1>()) != 0;
+}
+
+template <Unsigned T>
+constexpr int most_significant_bit_position(T value) noexcept {
+    T bit_mask = single_bit_mask<T, 0>();
+    for (int i = 0; i < static_cast<int>(sizeof(value) * 8); i++) {
+        if ((value & bit_mask) != 0) {
+            return i;
+        }
+        bit_mask >>= 1;
+    }
+    return sizeof(value) * 8;
 }
 
 constexpr uint16_t exponent_to_uint16(uint64_t exponent_value) noexcept {

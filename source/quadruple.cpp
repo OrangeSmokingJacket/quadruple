@@ -1,5 +1,6 @@
 #include "quadruple.hpp"
 #include "utils.hpp"
+#include "ub_consistency.hpp"
 
 #include <bit>
 #include <cassert>
@@ -15,6 +16,30 @@ static_assert(std::is_trivially_copyable_v<quadruple>);
 static_assert(std::is_trivially_copy_assignable_v<quadruple>);
 static_assert(std::is_trivially_move_constructible_v<quadruple>);
 static_assert(std::is_trivially_move_assignable_v<quadruple>);
+
+
+quadruple::quadruple(uint64_t value) noexcept {
+    if (value == 0) {
+        return;
+    }
+
+    auto msb = most_significant_bit_position<uint64_t>(value);
+    uint64_t exponent_val = exponent_values::quadruple_exponent_zero + static_cast<uint16_t>(sizeof(uint64_t) * 8 - static_cast<uint64_t>(msb) - 1);
+    exponent_val <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
+    assert((exponent_val & upper_mantissa_mask) == 0);
+
+    if (msb > static_cast<int>(quadruple_exponent_size)) {
+        uint64_t mantissa_val = value << (msb - static_cast<int>(quadruple_exponent_size));
+        mantissa_val &= upper_mantissa_mask;
+        upper_ = exponent_val | mantissa_val;
+    } else {
+        uint64_t mantissa_val1 = value >> (static_cast<int>(quadruple_exponent_size) - msb);
+        mantissa_val1 &= upper_mantissa_mask;
+        uint64_t mantissa_val2 = value << (static_cast<int>(sizeof(uint64_t) * 8 - quadruple_exponent_size) + msb);
+        upper_ = exponent_val | mantissa_val1;
+        lower_ = mantissa_val2;
+    }
+}
 
 quadruple::quadruple(float value) noexcept {
     // handle NaN
@@ -60,7 +85,7 @@ quadruple::quadruple(float value) noexcept {
             }
             // find how much we have to shift mantissa and adjust exponent
             auto msb = mantissa.most_significant_bit_position();
-            int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
+            int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
             exponent_val -= static_cast<uint64_t>(-exponent_adj) << ((sizeof(uint64_t) - sizeof(uint16_t)) * 8);
             // convert mantissa back
             mantissa.normalize(exponent_adj);
@@ -133,7 +158,7 @@ quadruple::quadruple(double value) noexcept {
             }
             // find how much we have to shift mantissa and adjust exponent
             auto msb = mantissa.most_significant_bit_position();
-            int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
+            int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
             exponent_val -= static_cast<uint64_t>(-exponent_adj) << ((sizeof(uint64_t) - sizeof(uint16_t)) * 8);
             // convert mantissa back
             mantissa.normalize(exponent_adj);
@@ -159,6 +184,348 @@ quadruple::quadruple(double value) noexcept {
     assert((mantissa_val1 & upper_mantissa_mask) == mantissa_val1);
     upper_ = exponent_val | mantissa_val1;
     lower_ = mantissa_val2;
+}
+
+quadruple::operator int8_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<int8_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<int8_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<int8_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(int8_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<int8_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<int8_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return static_cast<int8_t>(-static_cast<int>(result));
+        } else {
+            return static_cast<int8_t>(result);
+        }
+    }
+}
+
+quadruple::operator int16_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<int16_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<int16_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<int16_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(int16_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<int16_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<int16_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return static_cast<int16_t>(-static_cast<int>(result));
+        } else {
+            return static_cast<int16_t>(result);
+        }
+    }
+}
+
+quadruple::operator int32_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<int32_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<int32_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<int32_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint32_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<int32_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<int32_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return -static_cast<int32_t>(result);
+        } else {
+            return static_cast<int32_t>(result);
+        }
+    }
+}
+
+quadruple::operator int64_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<int64_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<int64_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<int64_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint64_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<int64_t>;
+            }
+        }
+        if (result_bit_size <= sizeof(uint64_t) * 8 - quadruple_exponent_size) {
+            auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+            result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        } else {
+            auto shift = result_bit_size - (sizeof(uint64_t) * 8 - quadruple_exponent_size);
+            uint64_t after_shift1 = ((upper_ & upper_mantissa_mask) | implied_bit_mask) << shift;
+            uint64_t after_shift2 = lower_ >> (sizeof(uint64_t) * 8 - shift);
+            result = after_shift1 | after_shift2;
+        }
+        if (signbit()) {
+            return -static_cast<int64_t>(result);
+        } else {
+            return static_cast<int64_t>(result);
+        }
+    }
+}
+
+quadruple::operator uint8_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<uint8_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<uint8_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<uint8_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint8_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint8_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<uint8_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return static_cast<uint8_t>(std::numeric_limits<uint8_t>::max() - static_cast<uint8_t>(result) + 1);
+        } else {
+            return static_cast<uint8_t>(result);
+        }
+    }
+}
+
+quadruple::operator uint16_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<uint16_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<uint16_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<uint16_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint16_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint16_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<uint16_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return static_cast<uint16_t>(std::numeric_limits<uint16_t>::max() - static_cast<uint16_t>(result) + 1);
+        } else {
+            return static_cast<uint16_t>(result);
+        }
+    }
+}
+
+quadruple::operator uint32_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<uint32_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<uint32_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<uint32_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint32_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint32_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<uint32_t>;
+            }
+        }
+        auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+        result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        if (signbit()) {
+            return std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(result) + 1;
+        } else {
+            return static_cast<uint32_t>(result);
+        }
+    }
+}
+
+quadruple::operator uint64_t() const noexcept {
+    if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
+        // NaN or Inf
+        std::feraiseexcept(FE_INVALID);
+        if (is_NaN()) {
+            return UB_handle::to_integer_conversion::NaN<uint64_t>;
+        } else {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_INF<uint64_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_INF<uint64_t>;
+            }
+        }
+    }
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+        return 0;
+    } else {
+        uint64_t result;
+        uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
+        if (result_bit_size < quadruple_exponent_zero) {
+            return 0;
+        }
+        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
+        if (result_bit_size > sizeof(uint64_t) * 8) {
+            if (signbit()) {
+                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint64_t>;
+            } else {
+                return UB_handle::to_integer_conversion::POS_OVERFLOW<uint64_t>;
+            }
+        }
+        if (result_bit_size <= sizeof(uint64_t) * 8 - quadruple_exponent_size) {
+            auto shift = sizeof(uint64_t) * 8 - quadruple_exponent_size - result_bit_size;
+            result = ((upper_ & upper_mantissa_mask) | implied_bit_mask) >> shift;
+        } else {
+            auto shift = result_bit_size - (sizeof(uint64_t) * 8 - quadruple_exponent_size);
+            uint64_t after_shift1 = ((upper_ & upper_mantissa_mask) | implied_bit_mask) << shift;
+            uint64_t after_shift2 = lower_ >> (sizeof(uint64_t) * 8 - shift);
+            result = after_shift1 | after_shift2;
+        }
+        if (signbit()) {
+            return std::numeric_limits<uint64_t>::max() - result + 1;
+        } else {
+            return result;
+        }
+    }
 }
 
 quadruple::operator float() const noexcept {
@@ -396,7 +763,7 @@ quadruple& quadruple::flip_sign() noexcept {
 }
 
 quadruple quadruple::operator+() const {
-    if constexpr (UNARY_SIGNALING_PRESERVED) {
+    if constexpr (UB_handle::unary_signaling::PRESERVED) {
         return *this;
     } else {
         if (is_signaling_NaN()) {
@@ -413,7 +780,7 @@ quadruple quadruple::operator+() const {
 }
 
 quadruple quadruple::operator-() const {
-    if constexpr (UNARY_SIGNALING_PRESERVED) {
+    if constexpr (UB_handle::unary_signaling::PRESERVED) {
         return {upper_ ^ sign_bit_mask, lower_};
     } else {
         if (is_signaling_NaN()) {
@@ -481,7 +848,7 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
     }
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
-    int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
+    int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
     auto adjusted_exponent = static_cast<uint64_t>(exponent_to_uint16(upper_) + static_cast<int16_t>(exponent_adj));
     if (adjusted_exponent == std::numeric_limits<uint64_t>::max()) {
         auto res = quadruple{res_mantissa.upper, res_mantissa.lower};
@@ -567,7 +934,7 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
     }
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
-    int exponent_adj = static_cast<int>(sizeof(mantissa_calc::lower) * 8 - upper_bit_size) - msb;
+    int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
     uint64_t adjusted_exponent;
     if (flipped_sign) {
         adjusted_exponent = static_cast<uint64_t>(exponent_to_uint16(rhs.upper_) + static_cast<int16_t>(exponent_adj));
@@ -669,21 +1036,11 @@ bool quadruple::mantissa_calc::is_zero() const noexcept {
 
 // returns 128, if there is no bits set
 int quadruple::mantissa_calc::most_significant_bit_position() const noexcept {
-    uint64_t bit_mask = single_bit_mask<uint64_t, 0>();
-    for (int i = 0; i < static_cast<int>(sizeof(upper) * 8); i++) {
-        if ((upper & bit_mask) != 0) {
-            return i;
-        }
-        bit_mask >>= 1;
+    if (upper != 0) {
+        return ::most_significant_bit_position<uint64_t>(upper);
+    } else {
+        return ::most_significant_bit_position<uint64_t>(lower) + static_cast<int>(sizeof(lower) * 8);
     }
-    bit_mask = single_bit_mask<uint64_t, 0>();
-    for (int i = 0; i < static_cast<int>(sizeof(lower) * 8); i++) {
-        if ((lower & bit_mask) != 0) {
-            return i + static_cast<int>(sizeof(upper) * 8);
-        }
-        bit_mask >>= 1;
-    }
-    return (sizeof(upper) + sizeof(lower)) * 8;
 }
 
 void quadruple::mantissa_calc::normalize(int adjustment) noexcept {

@@ -53,6 +53,72 @@ namespace {
         }
         return result;
     }
+
+    template<typename T, typename Generator>
+    std::vector<T> generete_integer_sequence(Generator& generator, uint64_t mask, size_t count) {
+        std::vector<T> result;
+        result.reserve(count);
+        for (size_t i = 0; i < count; i++) {
+            result.emplace_back(static_cast<T>(static_cast<uint64_t>(generator()) & mask));
+        }
+        return result;
+    }
+}
+
+template <>
+std::vector<int8_t> generate_normal_numbers(size_t count) {
+    static constexpr uint8_t int8_mask = 0x7F;
+    std::mt19937 generator{};
+    return generete_integer_sequence<int8_t>(generator, int8_mask, count);
+}
+
+template <>
+std::vector<int16_t> generate_normal_numbers(size_t count) {
+    static constexpr uint16_t int16_mask = 0x7FFF;
+    std::mt19937 generator{};
+    return generete_integer_sequence<int16_t>(generator, int16_mask, count);
+}
+
+template <>
+std::vector<int32_t> generate_normal_numbers(size_t count) {
+    static constexpr uint32_t int32_mask = 0x7FFFFFFF;
+    std::mt19937 generator{};
+    return generete_integer_sequence<int32_t>(generator, int32_mask, count);
+}
+
+template <>
+std::vector<int64_t> generate_normal_numbers(size_t count) {
+    static constexpr uint64_t int64_mask = 0x7FFFFFFFFFFFFFFF;
+    std::mt19937_64 generator{};
+    return generete_integer_sequence<int64_t>(generator, int64_mask, count);
+}
+
+template <>
+std::vector<uint8_t> generate_normal_numbers(size_t count) {
+    static constexpr uint8_t uint8_mask = 0xFF;
+    std::mt19937 generator{};
+    return generete_integer_sequence<uint8_t>(generator, uint8_mask, count);
+}
+
+template <>
+std::vector<uint16_t> generate_normal_numbers(size_t count) {
+    static constexpr uint16_t uint16_mask = 0xFFFF;
+    std::mt19937 generator{};
+    return generete_integer_sequence<uint16_t>(generator, uint16_mask, count);
+}
+
+template <>
+std::vector<uint32_t> generate_normal_numbers(size_t count) {
+    static constexpr uint32_t uint32_mask = 0xFFFFFFFF;
+    std::mt19937 generator{};
+    return generete_integer_sequence<uint32_t>(generator, uint32_mask, count);
+}
+
+template <>
+std::vector<uint64_t> generate_normal_numbers(size_t count) {
+    static constexpr uint64_t uint64_mask = 0xFFFFFFFFFFFFFFFF;
+    std::mt19937_64 generator{};
+    return generete_integer_sequence<uint64_t>(generator, uint64_mask, count);
 }
 
 template <>
@@ -70,7 +136,7 @@ std::vector<double> generate_normal_numbers(size_t count) {
 }
 
 template <>
-std::vector<quadruple> generate_normal_numbers<quadruple>(size_t count) {
+std::vector<quadruple> generate_normal_numbers(size_t count) {
     static constexpr uint64_t quadruple_upper_mask = 0x7FFFFFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<false>(generator, quadruple_upper_mask, count);
@@ -91,7 +157,7 @@ std::vector<double> generate_subnormal_numbers(size_t count) {
 }
 
 template <>
-std::vector<quadruple> generate_subnormal_numbers<quadruple>(size_t count) {
+std::vector<quadruple> generate_subnormal_numbers(size_t count) {
     static constexpr uint64_t quadruple_upper_mask = 0x0000FFFFFFFFFFFF;
     std::mt19937_64 generator{};
     return generate_sequence<true>(generator, quadruple_upper_mask, count);}

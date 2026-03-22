@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 class quadruple;
@@ -14,6 +15,22 @@ std::vector<T> generate_normal_numbers(size_t count);
 template <typename T>
 std::vector<T> generate_subnormal_numbers(size_t count);
 
+template <>
+std::vector<int8_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<int16_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<int32_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<int64_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<uint8_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<uint16_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<uint32_t> generate_normal_numbers(size_t count);
+template <>
+std::vector<uint64_t> generate_normal_numbers(size_t count);
 template <>
 std::vector<float> generate_normal_numbers(size_t count);
 template <>

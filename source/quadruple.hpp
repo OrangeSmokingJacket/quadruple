@@ -16,9 +16,21 @@ public:
     quadruple& operator=(quadruple&&) noexcept = default;
     ~quadruple() noexcept = default;
 
-    // Converters
+    template <typename T> requires std::is_integral_v<T>
+    OPTIONAL_EXPLICIT() quadruple(T value) noexcept;
+    OPTIONAL_EXPLICIT() quadruple(uint64_t value) noexcept;
+
     OPTIONAL_EXPLICIT() quadruple(float value) noexcept;
     OPTIONAL_EXPLICIT() quadruple(double value) noexcept;
+
+    OPTIONAL_EXPLICIT() operator int8_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator int16_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator int32_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator int64_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator uint8_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator uint16_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator uint32_t() const noexcept;
+    OPTIONAL_EXPLICIT() operator uint64_t() const noexcept;
 
     OPTIONAL_EXPLICIT() operator float() const noexcept;
     OPTIONAL_EXPLICIT() operator double() const noexcept;
@@ -31,6 +43,7 @@ public:
     bool is_subnormal() const noexcept;
     bool signbit() const noexcept;
 
+    // TODO: NaN packing
     static quadruple quiet_NaN() noexcept;
     static quadruple negative_quiet_NaN() noexcept;
     static quadruple signaling_NaN() noexcept;
@@ -81,14 +94,12 @@ private:
     };
 
     [[nodiscard]] inline mantissa_calc convert_mantissa() const;
-
-private:
-    static constexpr bool UNARY_SIGNALING_PRESERVED_FLOAT = is_sNaN(-std::numeric_limits<float>::signaling_NaN());
-    static constexpr bool UNARY_SIGNALING_PRESERVED_DOUBLE = is_sNaN(-std::numeric_limits<double>::signaling_NaN());
-    static_assert(UNARY_SIGNALING_PRESERVED_FLOAT == UNARY_SIGNALING_PRESERVED_DOUBLE &&
-        "unary signaling behaviour is undefined");
-
-public:
-    static constexpr bool UNARY_SIGNALING_PRESERVED =
-        UNARY_SIGNALING_PRESERVED_FLOAT == UNARY_SIGNALING_PRESERVED_DOUBLE ? UNARY_SIGNALING_PRESERVED_FLOAT : false;
 };
+
+template <typename T> requires std::is_integral_v<T>
+quadruple::quadruple(T value) noexcept
+    : quadruple(value < 0 ? static_cast<uint64_t>(-value) : static_cast<uint64_t>(value)) {
+    if (value < 0) {
+        flip_sign();
+    }
+}
