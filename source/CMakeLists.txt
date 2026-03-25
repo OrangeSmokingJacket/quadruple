@@ -9,13 +9,6 @@ set(HEADERS_${PROJECT_NAME}
         ub_consistency.hpp
 )
 
-if (ENABLE_TESTS OR ENABLE_BENCHMARKS)
-    set(test_helpers
-            test_helpers/test_utils.hpp
-            test_helpers/test_utils.cpp
-    )
-endif ()
-
 include_directories(${CMAKE_SOURCE_DIR})
 
-add_library(quadruple ${HEADERS_${PROJECT_NAME}} ${SOURCE_${PROJECT_NAME}} ${test_helpers})
+add_library(quadruple ${HEADERS_${PROJECT_NAME}} ${SOURCE_${PROJECT_NAME}})

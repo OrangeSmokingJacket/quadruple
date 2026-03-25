@@ -84,6 +84,10 @@ find_package(Catch2 3.13.0 REQUIRED)
 include_directories(source)
 add_subdirectory(source)
 
+if (ENABLE_TESTS OR ENABLE_BENCHMARKS)
+    add_subdirectory(test_helpers)
+endif ()
+
 if (ENABLE_TESTS)
     add_subdirectory(tests)
 endif ()
