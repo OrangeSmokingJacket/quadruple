@@ -1026,6 +1026,18 @@ bool quadruple::operator>=(const quadruple& rhs) const noexcept {
     return !operator<(rhs);
 }
 
+std::partial_ordering quadruple::operator<=>(const quadruple& rhs) const noexcept {
+    if (*this == rhs) {
+        return std::partial_ordering::equivalent;
+    } else if (*this < rhs) {
+        return std::partial_ordering::less;
+    } else if (*this > rhs) {
+        return std::partial_ordering::greater;
+    } else {
+        return std::partial_ordering::unordered;
+    }
+}
+
 quadruple::quadruple(uint64_t upper, uint64_t lower) noexcept
     : lower_(lower)
     , upper_(upper) {}

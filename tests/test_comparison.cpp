@@ -102,6 +102,55 @@ TEST_CASE("not equals", "[comparison]") {
     }
 }
 
+TEST_CASE("spaceship", "[comparison]") {
+    SECTION("signed zeros") {
+        SECTION("+/+") {
+            REQUIRE((quadruple{} <=> quadruple{}) == std::partial_ordering::equivalent);
+        }
+        SECTION("+/-") {
+            REQUIRE((quadruple{} <=> (-quadruple{})) == std::partial_ordering::equivalent);
+        }
+        SECTION("-/+") {
+            REQUIRE(((-quadruple{}) <=> quadruple{}) == std::partial_ordering::equivalent);
+        }
+        SECTION("-/-") {
+            REQUIRE(((-quadruple{}) <=> (-quadruple{})) == std::partial_ordering::equivalent);
+        }
+    }
+    SECTION("NaN") {
+        SECTION("+0") {
+            REQUIRE((quadruple{} <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple{} <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::quiet_NaN() <=> quadruple{}) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> quadruple{}) == std::partial_ordering::unordered);
+        }
+        SECTION("-0") {
+            REQUIRE(((-quadruple{}) <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE(((-quadruple{}) <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::quiet_NaN() <=> (-quadruple{})) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> (-quadruple{})) == std::partial_ordering::unordered);
+        }
+        SECTION("+inf") {
+            REQUIRE((quadruple::infinity() <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::infinity() <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::quiet_NaN() <=> quadruple::infinity()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> quadruple::infinity()) == std::partial_ordering::unordered);
+        }
+        SECTION("-inf") {
+            REQUIRE(((-quadruple::infinity()) <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE(((-quadruple::infinity()) <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::quiet_NaN() <=> (-quadruple::infinity())) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> (-quadruple::infinity())) == std::partial_ordering::unordered);
+        }
+        SECTION("NaN") {
+            REQUIRE((quadruple::quiet_NaN() <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::quiet_NaN() <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> quadruple::quiet_NaN()) == std::partial_ordering::unordered);
+            REQUIRE((quadruple::signaling_NaN() <=> quadruple::signaling_NaN()) == std::partial_ordering::unordered);
+        }
+    }
+}
+
 TEMPLATE_TEST_CASE_SIG("less and derivatives", "[comparison]",
     ((typename ValueType, typename ComparatorType), ValueType, ComparatorType),
     (float, std::less<>),

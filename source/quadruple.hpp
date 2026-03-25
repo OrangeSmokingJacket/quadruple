@@ -69,6 +69,7 @@ public:
     bool operator<=(const quadruple& rhs) const noexcept;
     bool operator>(const quadruple& rhs) const noexcept;
     bool operator>=(const quadruple& rhs) const noexcept;
+    std::partial_ordering operator<=>(const quadruple& rhs) const noexcept;
 
 private:
     // data
