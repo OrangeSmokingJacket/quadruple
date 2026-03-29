@@ -59,6 +59,7 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
             -Wsign-conversion
             -Wsign-promo
 
+            # TODO: this hides __int128 warnings, but there are others
             -Wno-pedantic
     )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
