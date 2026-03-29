@@ -3,6 +3,16 @@
 #include <cstdint>
 #include <vector>
 
+#if defined(__SIZEOF_INT128__)
+    using integer_types = std::tuple<
+        int8_t, int16_t, int32_t, int64_t, __int128,
+        uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
+#else
+using integer_types = std::tuple<
+    int8_t, int16_t, int32_t, int64_t,
+    uint8_t, uint16_t, uint32_t, uint64_t>;
+#endif
+
 class quadruple;
 
 static constexpr size_t benchmark_size = 10000;
@@ -44,6 +54,15 @@ std::vector<double> generate_subnormal_numbers(size_t count);
 template <>
 std::vector<quadruple> generate_subnormal_numbers(size_t count);
 
+#if defined(__SIZEOF_INT128__)
+
+template <>
+std::vector<__int128> generate_normal_numbers(size_t count);
+template <>
+std::vector<unsigned __int128> generate_normal_numbers(size_t count);
+
+#endif
+
 template<typename T>
 void remove_NaNs(std::vector<T>& vector) {
     for (auto it = vector.begin(); it != vector.end();) {
@@ -56,3 +75,49 @@ void remove_NaNs(std::vector<T>& vector) {
 }
 template<>
 void remove_NaNs(std::vector<quadruple>& vector);
+
+
+namespace impl {
+
+    template <typename Packer, typename... Types>
+    struct merge;
+
+    template <template <typename...> typename Packer, typename... Types>
+    struct merge<Packer<Types...>> {
+        using type = Packer<Types...>;
+    };
+
+    template <template <typename...> typename Packer, typename... Ts, typename... Us, typename... Rest>
+    struct merge<Packer<Ts...>, Packer<Us...>, Rest...> {
+        using type = merge<Packer<Ts..., Us...>, Rest...>::type;
+    };
+
+    template <typename LeftType, typename Packer>
+    struct one_side_permutation;
+
+    template <typename LeftType, template <typename...> typename Packer, typename... RightTypes>
+    struct one_side_permutation<LeftType, Packer<RightTypes...>> {
+        using type = Packer<Packer<LeftType, RightTypes>...>;
+    };
+
+} // namespace impl
+
+template <typename Packer, typename T>
+struct types_cross_product;
+
+template <template <typename...> typename Packer, typename... LeftTypes, typename... RightTypes>
+struct types_cross_product<Packer<LeftTypes...>, Packer<RightTypes...>> {
+    using type = impl::merge<typename impl::one_side_permutation<LeftTypes, Packer<RightTypes...>>::type...>::type;
+};
+
+template<typename T>
+struct rebind;
+
+template<template<typename...> class C, typename... Args>
+struct rebind<C<Args...>> {
+    template<typename... NewArgs>
+    using with = C<NewArgs...>;
+};
+
+template<typename T, typename... NewArgs>
+using rebind_with = typename rebind<T>::template with<NewArgs...>;

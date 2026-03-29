@@ -23,6 +23,16 @@ public:
     OPTIONAL_EXPLICIT() quadruple(float value) noexcept;
     OPTIONAL_EXPLICIT() quadruple(double value) noexcept;
 
+#if defined(__SIZEOF_INT128__)
+    static_assert(__SIZEOF_INT128__ == 16);
+
+    OPTIONAL_EXPLICIT() quadruple(__int128 value) noexcept;
+    OPTIONAL_EXPLICIT() quadruple(unsigned __int128 value) noexcept;
+
+    OPTIONAL_EXPLICIT() operator __int128() const noexcept;
+    OPTIONAL_EXPLICIT() operator unsigned __int128() const noexcept;
+#endif
+
     OPTIONAL_EXPLICIT() operator int8_t() const noexcept;
     OPTIONAL_EXPLICIT() operator int16_t() const noexcept;
     OPTIONAL_EXPLICIT() operator int32_t() const noexcept;

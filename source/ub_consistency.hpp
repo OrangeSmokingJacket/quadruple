@@ -20,7 +20,6 @@ namespace UB_handle {
             PRESERVED_FLOAT == PRESERVED_DOUBLE ? PRESERVED_FLOAT : false;
     };
 
-    // INFINITY_TO_INTEGER
     namespace to_integer_conversion {
         // Since ub can not be checked during compilation, we have to write values manually
 #if defined(__GNUC__)
@@ -28,10 +27,6 @@ namespace UB_handle {
         static constexpr T POS_OVERFLOW = T{0};
         template <typename T> requires std::is_integral_v<T>
         static constexpr T NEG_OVERFLOW = T{0};
-        template <typename T> requires std::is_integral_v<T>
-        static constexpr T POS_INF = T{0};
-        template <typename T> requires std::is_integral_v<T>
-        static constexpr T NEG_INF = T{0};
         template <typename T> requires std::is_integral_v<T>
         static constexpr T NaN = T{0};
 
@@ -48,23 +43,22 @@ namespace UB_handle {
         constexpr uint64_t NEG_OVERFLOW<uint64_t> = 0x8000000000000000;
 
         template <>
-        constexpr int32_t POS_INF<int32_t> = std::numeric_limits<int32_t>::min(); // 0x80000000
-        template <>
-        constexpr int64_t POS_INF<int64_t> = std::numeric_limits<int64_t>::min(); // 0x8000000000000000
-        template <>
-
-        constexpr int32_t NEG_INF<int32_t> = std::numeric_limits<int32_t>::min(); // 0x80000000
-        template <>
-        constexpr int64_t NEG_INF<int64_t> = std::numeric_limits<int64_t>::min(); // 0x8000000000000000
-        template <>
-        constexpr uint64_t NEG_INF<uint64_t> = 0x8000000000000000;
-
-        template <>
         constexpr int32_t NaN<int32_t> = std::numeric_limits<int32_t>::min(); // 0x80000000
         template <>
         constexpr int64_t NaN<int64_t> = std::numeric_limits<int64_t>::min(); // 0x8000000000000000
         template <>
         constexpr uint64_t NaN<uint64_t> = 0x8000000000000000;
+
+#if defined(__SIZEOF_INT128__)
+        template <>
+        constexpr __int128 NaN<__int128> = (__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000};
+        template <>
+        constexpr unsigned __int128 NEG_OVERFLOW<unsigned __int128> =
+            ((unsigned __int128){0x8000000000000000} << 64) + (unsigned __int128){0x8000000000000000};
+        template <>
+        constexpr unsigned __int128 NaN<unsigned __int128> =
+            ((unsigned __int128){0x8000000000000000} << 64) + (unsigned __int128){0x8000000000000000};
+#endif
 #endif
     } // namespace to_integer_conversion
 

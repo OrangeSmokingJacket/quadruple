@@ -286,12 +286,32 @@ TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion][floating]", float,
     }
 }
 
-TEMPLATE_TEST_CASE("same type conversion", "[conversion][integers]",
-    int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t) {
+TEMPLATE_LIST_TEST_CASE("same type conversion", "[conversion][integers]", integer_types) {
     auto check_conversion = [](TestType val) {
-        quadruple val_converted{val};
-        TestType converted_back{val_converted};
-        REQUIRE(val == converted_back);
+        bool proper_representation = true;
+        if constexpr (sizeof(TestType) * 8 > quadruple_mantissa_size) {
+            if constexpr (std::is_same_v<TestType, __int128>) {
+                proper_representation = val <= max_representable_int128 && val >= min_representable_int128;
+            } else if constexpr (std::is_same_v<TestType, unsigned __int128>) {
+                proper_representation = val <= max_representable_uint128;
+            }
+        }
+
+        if (proper_representation) {
+            quadruple val_converted{val};
+            TestType converted_back{val_converted};
+            REQUIRE(val == converted_back);
+        } else {
+            // edge case of 128 bit integers
+            // not every number can be represented in quadruple exactly, but after rounding it can be
+            // if value is less than 'quadruple_mantissa_size' bits
+            // than val_converted and val_converted_rounded will be the same
+            quadruple val_converted_rounded{val};
+            TestType converted_back_rounded{val_converted_rounded};
+            quadruple val_converted{converted_back_rounded};
+            TestType converted_back{val_converted};
+            REQUIRE(converted_back_rounded == converted_back);
+        }
     };
 
     SECTION("positive") {
@@ -351,16 +371,12 @@ TEMPLATE_TEST_CASE("same type conversion", "[conversion][integers]",
     }
 }
 
-TEMPLATE_TEST_CASE_SIG("rounding conversion", "[conversion][integers]",
-    ((typename FromType, typename ToType), FromType, ToType),
-    (double, int8_t),
-    (double, int16_t),
-    (double, int32_t),
-    (double, int64_t),
-    (double, uint8_t),
-    (double, uint16_t),
-    (double, uint32_t),
-    (double, uint64_t)) {
+using rounding_conversion_types = types_cross_product<std::tuple<float, double>, integer_types>::type;
+
+// list does not work with signatures
+TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", rounding_conversion_types) {
+    using FromType = std::tuple_element<0, TestType>::type;
+    using ToType = std::tuple_element<1, TestType>::type;
     auto check_conversion = [](FromType original_val, bool should_raise = false) {
         quadruple quad{original_val};
         ToType converted1 = static_cast<ToType>(original_val);
@@ -373,34 +389,84 @@ TEMPLATE_TEST_CASE_SIG("rounding conversion", "[conversion][integers]",
 
     SECTION("positive") {
         SECTION("0.49") {
-            check_conversion(0.49);
+            check_conversion(static_cast<FromType>(0.49));
         }
         SECTION("0.5") {
-            check_conversion(0.50);
+            check_conversion(static_cast<FromType>(0.50));
         }
         SECTION("0.51") {
-            check_conversion(0.51);
+            check_conversion(static_cast<FromType>(0.51));
         }
         SECTION("1.49") {
-            check_conversion(1.49);
+            check_conversion(static_cast<FromType>(1.49));
         }
         SECTION("1.50") {
-            check_conversion(1.50);
+            check_conversion(static_cast<FromType>(1.50));
         }
         SECTION("1.51") {
-            check_conversion(1.51);
+            check_conversion(static_cast<FromType>(1.51));
         }
         SECTION("2.49") {
-            check_conversion(2.49);
+            check_conversion(static_cast<FromType>(2.49));
         }
         SECTION("2.50") {
-            check_conversion(2.50);
+            check_conversion(static_cast<FromType>(2.50));
         }
         SECTION("2.51") {
-            check_conversion(2.51);
+            check_conversion(static_cast<FromType>(2.51));
+        }
+        SECTION("1e7") {
+            check_conversion(static_cast<FromType>(1e7));
+        }
+        SECTION("1e8") {
+            check_conversion(static_cast<FromType>(1e8));
+        }
+        SECTION("1e9") {
+            check_conversion(static_cast<FromType>(1e9));
+        }
+        SECTION("1e10") {
+            check_conversion(static_cast<FromType>(1e10));
+        }
+        SECTION("1e11") {
+            check_conversion(static_cast<FromType>(1e11));
+        }
+        SECTION("1e12") {
+            check_conversion(static_cast<FromType>(1e12));
+        }
+        SECTION("1e13") {
+            check_conversion(static_cast<FromType>(1e13));
+        }
+        SECTION("1e14") {
+            check_conversion(static_cast<FromType>(1e14));
+        }
+        SECTION("1e15") {
+            check_conversion(static_cast<FromType>(1e15));
+        }
+        SECTION("1e16") {
+            check_conversion(static_cast<FromType>(1e16));
+        }
+        SECTION("1e17") {
+            check_conversion(static_cast<FromType>(1e17));
+        }
+        SECTION("1e18") {
+            check_conversion(static_cast<FromType>(1e18));
+        }
+        SECTION("1e19") {
+            check_conversion(static_cast<FromType>(1e19));
+        }
+        SECTION("1e20") {
+            check_conversion(static_cast<FromType>(1e10));
+        }
+        SECTION("1e21") {
+            check_conversion(static_cast<FromType>(1e21));
         }
         SECTION("1e30") {
-            check_conversion(1e30);
+            check_conversion(static_cast<FromType>(1e30));
+        }
+        if constexpr (sizeof(FromType) == sizeof(double)) {
+            SECTION("1e70") {
+                check_conversion(static_cast<FromType>(1e70));
+            }
         }
         SECTION("Inf") {
             check_conversion(std::numeric_limits<FromType>::infinity(), true);
@@ -412,34 +478,84 @@ TEMPLATE_TEST_CASE_SIG("rounding conversion", "[conversion][integers]",
 
     SECTION("negative") {
         SECTION("0.49") {
-            check_conversion(-0.49);
+            check_conversion(static_cast<FromType>(-0.49));
         }
         SECTION("0.5") {
-            check_conversion(-0.50);
+            check_conversion(static_cast<FromType>(-0.50));
         }
         SECTION("0.51") {
-            check_conversion(-0.51);
+            check_conversion(static_cast<FromType>(-0.51));
         }
         SECTION("1.49") {
-            check_conversion(-1.49);
+            check_conversion(static_cast<FromType>(-1.49));
         }
         SECTION("1.50") {
-            check_conversion(-1.50);
+            check_conversion(static_cast<FromType>(-1.50));
         }
         SECTION("1.51") {
-            check_conversion(-1.51);
+            check_conversion(static_cast<FromType>(-1.51));
         }
         SECTION("2.49") {
-            check_conversion(-2.49);
+            check_conversion(static_cast<FromType>(-2.49));
         }
         SECTION("2.50") {
-            check_conversion(-2.50);
+            check_conversion(static_cast<FromType>(-2.50));
         }
         SECTION("2.51") {
-            check_conversion(-2.51);
+            check_conversion(static_cast<FromType>(-2.51));
+        }
+        SECTION("1e7") {
+            check_conversion(static_cast<FromType>(-1e7));
+        }
+        SECTION("1e8") {
+            check_conversion(static_cast<FromType>(-1e8));
+        }
+        SECTION("1e9") {
+            check_conversion(static_cast<FromType>(-1e9));
+        }
+        SECTION("1e10") {
+            check_conversion(static_cast<FromType>(-1e10));
+        }
+        SECTION("1e11") {
+            check_conversion(static_cast<FromType>(-1e11));
+        }
+        SECTION("1e12") {
+            check_conversion(static_cast<FromType>(-1e12));
+        }
+        SECTION("1e13") {
+            check_conversion(static_cast<FromType>(-1e13));
+        }
+        SECTION("1e14") {
+            check_conversion(static_cast<FromType>(-1e14));
+        }
+        SECTION("1e15") {
+            check_conversion(static_cast<FromType>(-1e15));
+        }
+        SECTION("1e16") {
+            check_conversion(static_cast<FromType>(-1e16));
+        }
+        SECTION("1e17") {
+            check_conversion(static_cast<FromType>(-1e17));
+        }
+        SECTION("1e18") {
+            check_conversion(static_cast<FromType>(-1e18));
+        }
+        SECTION("1e19") {
+            check_conversion(static_cast<FromType>(-1e19));
+        }
+        SECTION("1e20") {
+            check_conversion(static_cast<FromType>(-1e10));
+        }
+        SECTION("1e21") {
+            check_conversion(static_cast<FromType>(-1e21));
         }
         SECTION("1e30") {
-            check_conversion(-1e30);
+            check_conversion(static_cast<FromType>(-1e30));
+        }
+        if constexpr (sizeof(FromType) == sizeof(double)) {
+            SECTION("1e70") {
+                check_conversion(static_cast<FromType>(-1e70));
+            }
         }
         SECTION("Inf") {
             check_conversion(-std::numeric_limits<FromType>::infinity(), true);

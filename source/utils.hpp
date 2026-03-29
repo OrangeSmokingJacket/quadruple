@@ -49,6 +49,16 @@ constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
 constexpr uint64_t quadruple_exponent_min = 0;
 constexpr uint64_t quadruple_exponent_zero = 0x3FFF000000000000;
 
+#if defined(__SIZEOF_INT128__)
+
+constexpr unsigned __int128 max_representable_uint128 = (unsigned __int128){1} << quadruple_mantissa_size;
+constexpr unsigned __int128 min_representable_uint128 = (unsigned __int128){0};
+constexpr __int128 max_representable_int128 = static_cast<__int128>(max_representable_uint128);
+constexpr __int128 min_representable_int128 = -max_representable_int128;
+
+#endif
+
+
 // mantissa_calc
 constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
 

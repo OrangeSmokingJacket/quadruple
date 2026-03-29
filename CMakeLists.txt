@@ -9,7 +9,8 @@ PROJECT(quadruple VERSION "${CMAKE_PROJECT_VERSION}" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# to allow __int128
+set(CMAKE_CXX_EXTENSIONS ON)
 
 message (STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 message (STATUS "CXX_STANDARD = ${CMAKE_CXX_STANDARD}")
@@ -57,6 +58,8 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
             -Wredundant-decls
             -Wsign-conversion
             -Wsign-promo
+
+            -Wno-pedantic
     )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(/W4 /WX)
