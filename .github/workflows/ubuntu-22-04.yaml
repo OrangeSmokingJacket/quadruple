@@ -19,11 +19,11 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo apt update && sudo apt install -y build-essential ninja-build
+        sudo apt update && sudo apt install -y build-essential ninja-build make zlib1g-dev wget \
+        python3-pip python3 python3-dev python3-setuptools
 
-    - name: Conan installation and configuration
-      run: |
-        pip install conan==2.20.0
+        python3 -m pip install --upgrade pip
+        python3 -m pip install --no-cache-dir "conan==2.20" cmake==3.30.0
         conan profile detect --force
 
     - name: Download dependencies
