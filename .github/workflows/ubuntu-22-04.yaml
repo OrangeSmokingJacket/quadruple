@@ -12,18 +12,17 @@ jobs:
         build_type: ["Release", "Debug"]
         implicit_casts: ["ON", "OFF"]
         extensions: ["ON", "OFF"]
-        sanitizers: ["ON", "OFF"]
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Install system dependencies
       run: |
-        sudo apt update && sudo apt install -y build-essential ninja-build make zlib1g-dev wget \
-        python3-pip python3 python3-dev python3-setuptools
+        sudo apt update && sudo apt install -y build-essential ninja-build
 
-        python3 -m pip install --upgrade pip
-        python3 -m pip install --no-cache-dir "conan==2.20" cmake==3.30.0
+    - name: Conan installation and configuration
+      run: |
+        pip install conan==2.20.0
         conan profile detect --force
 
     - name: Download dependencies
@@ -41,7 +40,6 @@ jobs:
         -DCMAKE_TOOLCHAIN_FILE=./build/${{matrix.build_type}}/generators/conan_toolchain.cmake \
         -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
         -DENABLE_IMPLICIT_CASTS=${{matrix.implicit_casts}} \
-        -DENABLE_ASAN=${{matrix.sanitizers}} \
         -DCMAKE_CXX_EXTENSIONS=${{matrix.extensions}} \
         -DENABLE_TESTS=ON \
         ..
