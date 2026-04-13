@@ -9,17 +9,15 @@ PROJECT(quadruple VERSION "${CMAKE_PROJECT_VERSION}" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-# to allow __int128
-set(CMAKE_CXX_EXTENSIONS ON)
 
 message (STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 message (STATUS "CXX_STANDARD = ${CMAKE_CXX_STANDARD}")
 message(STATUS "ARCH : ${CMAKE_SYSTEM_NAME}")
 
 option(ENABLE_IMPLICIT_CASTS "enable implicit casts to and from quadruple" OFF)
-option(ENABLE_TESTS "use tests" ON)
+option(ENABLE_TESTS "use tests" OFF)
 option(ENABLE_ASAN "use address sanitizer" OFF)
-option(ENABLE_BENCHMARKS "use benchmarks" ON)
+option(ENABLE_BENCHMARKS "use benchmarks" OFF)
 
 if (ENABLE_IMPLICIT_CASTS)
     message("Implicit casts are allowed")
