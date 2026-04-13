@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   build:
+    runs-on: ubuntu-22.04
+
     strategy:
       matrix:
         cxx_standard: [20]
@@ -11,8 +13,6 @@ jobs:
         implicit_casts: ["ON", "OFF"]
         extensions: ["ON", "OFF"]
         sanitizers: ["ON", "OFF"]
-
-  runs-on: ubuntu-22.04
 
   steps:
     - name: Actions checkout
