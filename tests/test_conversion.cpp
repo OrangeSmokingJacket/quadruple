@@ -286,18 +286,23 @@ TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion][floating]", float,
     }
 }
 
+template <typename T>
+constexpr bool check_representation([[maybe_unused]] T val) {
+#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
+    if constexpr (sizeof(T) * 8 > quadruple_mantissa_size) {
+        if constexpr (std::is_same_v<T, __int128>) {
+            return val <= max_representable_int128 && val >= min_representable_int128;
+        } else if constexpr (std::is_same_v<T, unsigned __int128>) {
+            return val <= max_representable_uint128;
+        }
+    }
+#endif
+    return true;
+}
+
 TEMPLATE_LIST_TEST_CASE("same type conversion", "[conversion][integers]", integer_types) {
     auto check_conversion = [](TestType val) {
-        bool proper_representation = true;
-        if constexpr (sizeof(TestType) * 8 > quadruple_mantissa_size) {
-            if constexpr (std::is_same_v<TestType, __int128>) {
-                proper_representation = val <= max_representable_int128 && val >= min_representable_int128;
-            } else if constexpr (std::is_same_v<TestType, unsigned __int128>) {
-                proper_representation = val <= max_representable_uint128;
-            }
-        }
-
-        if (proper_representation) {
+        if (check_representation(val)) {
             quadruple val_converted{val};
             TestType converted_back{val_converted};
             REQUIRE(val == converted_back);

@@ -186,7 +186,7 @@ quadruple::quadruple(double value) noexcept {
     lower_ = mantissa_val2;
 }
 
-#if defined(__SIZEOF_INT128__)
+#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
 
 quadruple::quadruple(__int128 value) noexcept
     : quadruple(value < 0 ? static_cast<unsigned __int128>(-value) : static_cast<unsigned __int128>(value)) {

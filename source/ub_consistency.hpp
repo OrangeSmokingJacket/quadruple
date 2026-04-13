@@ -49,7 +49,7 @@ namespace UB_handle {
         template <>
         constexpr uint64_t NaN<uint64_t> = 0x8000000000000000;
 
-#if defined(__SIZEOF_INT128__)
+#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
         template <>
         constexpr __int128 NaN<__int128> = (__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000};
         template <>

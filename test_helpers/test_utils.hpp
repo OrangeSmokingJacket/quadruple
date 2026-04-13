@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#if defined(__SIZEOF_INT128__)
+#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
     using integer_types = std::tuple<
         int8_t, int16_t, int32_t, int64_t, __int128,
         uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
@@ -54,7 +54,7 @@ std::vector<double> generate_subnormal_numbers(size_t count);
 template <>
 std::vector<quadruple> generate_subnormal_numbers(size_t count);
 
-#if defined(__SIZEOF_INT128__)
+#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
 
 template <>
 std::vector<__int128> generate_normal_numbers(size_t count);

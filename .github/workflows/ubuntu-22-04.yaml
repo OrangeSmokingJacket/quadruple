@@ -39,8 +39,8 @@ jobs:
         cmake -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE=./build/${{matrix.build_type}}/generators/conan_toolchain.cmake \
         -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+        -DENABLE_EXTENSIONS=${{matrix.extensions}} \
         -DENABLE_IMPLICIT_CASTS=${{matrix.implicit_casts}} \
-        -DCMAKE_CXX_EXTENSIONS=${{matrix.extensions}} \
         -DENABLE_TESTS=ON \
         ..
         cmake --build .
