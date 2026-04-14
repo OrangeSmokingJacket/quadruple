@@ -15,53 +15,57 @@ bool is_negative(quadruple val) {
     return val.signbit();
 }
 
-TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", integer_types) {
+using ub_conversion_types = types_cross_product<std::tuple<float, double>, integer_types>::type;
+
+TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
+    using FromType = std::tuple_element<0, TestType>::type;
+    using ToType = std::tuple_element<1, TestType>::type;
     SECTION("positive") {
         SECTION("overflow") {
-            double val = std::numeric_limits<double>::max();
-            TestType converted = static_cast<TestType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<TestType>);
+            double val = std::numeric_limits<FromType>::max();
+            ToType converted = static_cast<ToType>(val);
+            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
         }
         SECTION("infinity") {
-            double val = std::numeric_limits<double>::infinity();
-            TestType converted = static_cast<TestType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<TestType>);
+            FromType val = std::numeric_limits<FromType>::infinity();
+            ToType converted = static_cast<ToType>(val);
+            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
         }
         SECTION("NaN") {
             SECTION("quiet") {
-                double val = std::numeric_limits<double>::quiet_NaN();
-                TestType converted = static_cast<TestType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<TestType>);
+                FromType val = std::numeric_limits<FromType>::quiet_NaN();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
             }
             SECTION("signaling") {
-                double val = std::numeric_limits<double>::signaling_NaN();
-                TestType converted = static_cast<TestType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<TestType>);
+                FromType val = std::numeric_limits<FromType>::signaling_NaN();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
             }
         }
     }
 
     SECTION("negative") {
         SECTION("overflow") {
-            double val = -std::numeric_limits<double>::max();
-            TestType converted = static_cast<TestType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<TestType>);
+            FromType val = -std::numeric_limits<FromType>::max();
+            ToType converted = static_cast<ToType>(val);
+            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
         }
         SECTION("infinity") {
-            double val = -std::numeric_limits<double>::infinity();
-            TestType converted = static_cast<TestType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<TestType>);
+            FromType val = -std::numeric_limits<FromType>::infinity();
+            ToType converted = static_cast<ToType>(val);
+            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
         }
         SECTION("NaN") {
             SECTION("quiet") {
-                double val = -std::numeric_limits<double>::quiet_NaN();
-                TestType converted = static_cast<TestType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<TestType>);
+                FromType val = -std::numeric_limits<FromType>::quiet_NaN();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
             }
             SECTION("signaling") {
-                double val = -std::numeric_limits<double>::signaling_NaN();
-                TestType converted = static_cast<TestType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<TestType>);
+                FromType val = -std::numeric_limits<FromType>::signaling_NaN();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
             }
         }
     }
