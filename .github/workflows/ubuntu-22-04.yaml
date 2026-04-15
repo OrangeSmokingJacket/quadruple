@@ -1,0 +1,54 @@
+name: ubuntu 22.04
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx_standard: [20]
+        build_type: ["Release", "Debug"]
+        implicit_casts: ["ON", "OFF"]
+        extensions: ["ON", "OFF"]
+        sanitizers: ["ON", "OFF"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update && sudo apt install -y build-essential ninja-build
+
+    - name: Conan installation and configuration
+      run: |
+        pip install conan==2.20.0
+        conan profile detect --force
+
+    - name: Download dependencies
+      run: |
+        mkdir build && cd build
+        cp ../conanfile.py .
+        conan install . --build missing -s build_type=${{matrix.build_type}} -s compiler.cppstd=${{matrix.cxx_standard}}
+
+    - name: Build
+      env:
+        CC: gcc
+      run: |
+        cd build
+        cmake -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE=./build/${{matrix.build_type}}/generators/conan_toolchain.cmake \
+        -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+        -DENABLE_EXTENSIONS=${{matrix.extensions}} \
+        -DENABLE_IMPLICIT_CASTS=${{matrix.implicit_casts}} \
+        -DENABLE_ASAN=${{matrix.sanitizers}} \
+        -DENABLE_TESTS=ON \
+        ..
+        cmake --build .
+
+    - name: Test
+      run: |
+        cd build
+        ctest -C ${{matrix.build_type}} -V --output-on-failure

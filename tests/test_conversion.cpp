@@ -7,6 +7,16 @@
 #include <cstring>
 #include <numbers>
 
+#if defined(IMPLICIT_CASTS)
+constexpr bool implicit_conversion_allowed = true;
+#else
+constexpr bool implicit_conversion_allowed = false;
+#endif
+
+TEMPLATE_LIST_TEST_CASE("implicit conversion", "[conversion]", all_constructable_types) {
+    STATIC_REQUIRE(std::is_convertible_v<TestType, quadruple> == implicit_conversion_allowed);
+}
+
 TEMPLATE_TEST_CASE("same type conversion", "[conversion][floating]", float, double) {
     auto check_conversion = [](TestType val) {
         quadruple val_converted{val};
@@ -286,18 +296,23 @@ TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion][floating]", float,
     }
 }
 
+template <typename T>
+constexpr bool check_representation([[maybe_unused]] T val) {
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
+    if constexpr (sizeof(T) * 8 > quadruple_mantissa_size) {
+        if constexpr (std::is_same_v<T, __int128>) {
+            return val <= max_representable_int128 && val >= min_representable_int128;
+        } else if constexpr (std::is_same_v<T, unsigned __int128>) {
+            return val <= max_representable_uint128;
+        }
+    }
+#endif
+    return true;
+}
+
 TEMPLATE_LIST_TEST_CASE("same type conversion", "[conversion][integers]", integer_types) {
     auto check_conversion = [](TestType val) {
-        bool proper_representation = true;
-        if constexpr (sizeof(TestType) * 8 > quadruple_mantissa_size) {
-            if constexpr (std::is_same_v<TestType, __int128>) {
-                proper_representation = val <= max_representable_int128 && val >= min_representable_int128;
-            } else if constexpr (std::is_same_v<TestType, unsigned __int128>) {
-                proper_representation = val <= max_representable_uint128;
-            }
-        }
-
-        if (proper_representation) {
+        if (check_representation(val)) {
             quadruple val_converted{val};
             TestType converted_back{val_converted};
             REQUIRE(val == converted_back);
@@ -384,6 +399,9 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         ToType converted2{quad};
         REQUIRE(std::fetestexcept(FE_INVALID) == should_raise);
 
+        // for some reason, without using both variables REQUIRE fails sometimes in Release build
+        CAPTURE(converted1);
+        CAPTURE(converted2);
         REQUIRE(converted1 == converted2);
     };
 
@@ -455,7 +473,7 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
             check_conversion(static_cast<FromType>(1e19));
         }
         SECTION("1e20") {
-            check_conversion(static_cast<FromType>(1e10));
+            check_conversion(static_cast<FromType>(1e20));
         }
         SECTION("1e21") {
             check_conversion(static_cast<FromType>(1e21));
@@ -544,7 +562,7 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
             check_conversion(static_cast<FromType>(-1e19));
         }
         SECTION("1e20") {
-            check_conversion(static_cast<FromType>(-1e10));
+            check_conversion(static_cast<FromType>(-1e20));
         }
         SECTION("1e21") {
             check_conversion(static_cast<FromType>(-1e21));
