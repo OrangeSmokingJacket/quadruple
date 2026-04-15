@@ -3,16 +3,6 @@
 #include <cstdint>
 #include <vector>
 
-#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
-    using integer_types = std::tuple<
-        int8_t, int16_t, int32_t, int64_t, __int128,
-        uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
-#else
-using integer_types = std::tuple<
-    int8_t, int16_t, int32_t, int64_t,
-    uint8_t, uint16_t, uint32_t, uint64_t>;
-#endif
-
 class quadruple;
 
 static constexpr size_t benchmark_size = 10000;
@@ -79,19 +69,6 @@ void remove_NaNs(std::vector<quadruple>& vector);
 
 namespace impl {
 
-    template <typename Packer, typename... Types>
-    struct merge;
-
-    template <template <typename...> typename Packer, typename... Types>
-    struct merge<Packer<Types...>> {
-        using type = Packer<Types...>;
-    };
-
-    template <template <typename...> typename Packer, typename... Ts, typename... Us, typename... Rest>
-    struct merge<Packer<Ts...>, Packer<Us...>, Rest...> {
-        using type = merge<Packer<Ts..., Us...>, Rest...>::type;
-    };
-
     template <typename LeftType, typename Packer>
     struct one_side_permutation;
 
@@ -102,12 +79,25 @@ namespace impl {
 
 } // namespace impl
 
+template <typename Packer, typename... Types>
+struct merge_types;
+
+template <template <typename...> typename Packer, typename... Types>
+struct merge_types<Packer<Types...>> {
+    using type = Packer<Types...>;
+};
+
+template <template <typename...> typename Packer, typename... Ts, typename... Us, typename... Rest>
+struct merge_types<Packer<Ts...>, Packer<Us...>, Rest...> {
+    using type = merge_types<Packer<Ts..., Us...>, Rest...>::type;
+};
+
 template <typename Packer, typename T>
 struct types_cross_product;
 
 template <template <typename...> typename Packer, typename... LeftTypes, typename... RightTypes>
 struct types_cross_product<Packer<LeftTypes...>, Packer<RightTypes...>> {
-    using type = impl::merge<typename impl::one_side_permutation<LeftTypes, Packer<RightTypes...>>::type...>::type;
+    using type = merge_types<typename impl::one_side_permutation<LeftTypes, Packer<RightTypes...>>::type...>::type;
 };
 
 template<typename T>
@@ -121,3 +111,15 @@ struct rebind<C<Args...>> {
 
 template<typename T, typename... NewArgs>
 using rebind_with = typename rebind<T>::template with<NewArgs...>;
+
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
+using integer_types = std::tuple<
+    int8_t, int16_t, int32_t, int64_t, __int128,
+    uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
+#else
+using integer_types = std::tuple<
+    int8_t, int16_t, int32_t, int64_t,
+    uint8_t, uint16_t, uint32_t, uint64_t>;
+#endif
+
+using all_constructable_types = merge_types<integer_types, std::tuple<float, double>>::type;

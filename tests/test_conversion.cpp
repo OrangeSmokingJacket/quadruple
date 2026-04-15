@@ -8,6 +8,16 @@
 #include <numbers>
 #include <iostream>
 
+#if defined(IMPLICIT_CASTS)
+constexpr bool implicit_conversion_allowed = true;
+#else
+constexpr bool implicit_conversion_allowed = false;
+#endif
+
+TEMPLATE_LIST_TEST_CASE("implicit conversion", "[conversion]", all_constructable_types) {
+    STATIC_REQUIRE(std::is_convertible_v<TestType, quadruple> == implicit_conversion_allowed);
+}
+
 TEMPLATE_TEST_CASE("same type conversion", "[conversion][floating]", float, double) {
     auto check_conversion = [](TestType val) {
         quadruple val_converted{val};
