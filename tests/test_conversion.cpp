@@ -6,6 +6,7 @@
 #include "test_helpers/test_utils.hpp"
 #include <cstring>
 #include <numbers>
+#include <iostream>
 
 TEMPLATE_TEST_CASE("same type conversion", "[conversion][floating]", float, double) {
     auto check_conversion = [](TestType val) {
@@ -288,7 +289,7 @@ TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion][floating]", float,
 
 template <typename T>
 constexpr bool check_representation([[maybe_unused]] T val) {
-#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
     if constexpr (sizeof(T) * 8 > quadruple_mantissa_size) {
         if constexpr (std::is_same_v<T, __int128>) {
             return val <= max_representable_int128 && val >= min_representable_int128;
@@ -389,6 +390,29 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         ToType converted2{quad};
         REQUIRE(std::fetestexcept(FE_INVALID) == should_raise);
 
+        // for some reason, without using both variables REQUIRE fails sometimes in Release build
+        // std::cout also prevents it
+        if constexpr (sizeof(ToType) > 8) {
+            Catch::cout() << "type: " << (std::is_signed_v<ToType> ? "int" : "uint") << sizeof(ToType) * 8 << std::endl;
+            Catch::cout() << "initial value: " << original_val << std::endl;
+            Catch::cout() << "static_cast:" << std::endl;
+            {
+                ToType copy = converted1;
+                Catch::cout() << "  low: " << static_cast<uint64_t>(copy) << std::endl;
+                copy >>= 64;
+                Catch::cout() << "  high: " << static_cast<uint64_t>(copy) << std::endl;
+            }
+            Catch::cout() << "through quadruple:" << std::endl;
+            {
+                ToType copy = converted2;
+                Catch::cout() << "  low: " << static_cast<uint64_t>(copy) << std::endl;
+                copy >>= 64;
+                Catch::cout() << "  high: " << static_cast<uint64_t>(copy) << std::endl;
+            }
+            Catch::cout() << std::endl;
+        }
+        CAPTURE(converted1);
+        CAPTURE(converted2);
         REQUIRE(converted1 == converted2);
     };
 
@@ -460,7 +484,7 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
             check_conversion(static_cast<FromType>(1e19));
         }
         SECTION("1e20") {
-            check_conversion(static_cast<FromType>(1e10));
+            check_conversion(static_cast<FromType>(1e20));
         }
         SECTION("1e21") {
             check_conversion(static_cast<FromType>(1e21));
@@ -549,7 +573,7 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
             check_conversion(static_cast<FromType>(-1e19));
         }
         SECTION("1e20") {
-            check_conversion(static_cast<FromType>(-1e10));
+            check_conversion(static_cast<FromType>(-1e20));
         }
         SECTION("1e21") {
             check_conversion(static_cast<FromType>(-1e21));

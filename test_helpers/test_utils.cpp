@@ -64,7 +64,7 @@ namespace {
         return result;
     }
 
-#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 
     template<typename T, typename Generator>  requires (sizeof(T) == __SIZEOF_INT128__)
     std::vector<T> generate_integer_sequence(Generator& generator, uint64_t mask, size_t count) {
@@ -185,7 +185,7 @@ std::vector<quadruple> generate_subnormal_numbers(size_t count) {
     return generate_sequence<true>(generator, quadruple_upper_mask, count);}
 
 
-#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 
 template <>
 std::vector<__int128> generate_normal_numbers(size_t count) {

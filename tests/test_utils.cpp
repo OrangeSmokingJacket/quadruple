@@ -21,10 +21,13 @@ TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
     using FromType = std::tuple_element<0, TestType>::type;
     using ToType = std::tuple_element<1, TestType>::type;
     SECTION("positive") {
-        SECTION("overflow") {
-            double val = std::numeric_limits<FromType>::max();
-            ToType converted = static_cast<ToType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
+        if constexpr(std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
+            // float to (u)int128 can not overflow
+            SECTION("overflow") {
+                double val = std::numeric_limits<FromType>::max();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
+            }
         }
         SECTION("infinity") {
             FromType val = std::numeric_limits<FromType>::infinity();
@@ -46,10 +49,13 @@ TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
     }
 
     SECTION("negative") {
-        SECTION("overflow") {
-            FromType val = -std::numeric_limits<FromType>::max();
-            ToType converted = static_cast<ToType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
+        if constexpr(std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
+            // float to (u)int128 can not overflow
+            SECTION("overflow") {
+                FromType val = -std::numeric_limits<FromType>::max();
+                ToType converted = static_cast<ToType>(val);
+                REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
+            }
         }
         SECTION("infinity") {
             FromType val = -std::numeric_limits<FromType>::infinity();

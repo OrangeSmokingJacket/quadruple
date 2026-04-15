@@ -23,7 +23,7 @@ public:
     OPTIONAL_EXPLICIT() quadruple(float value) noexcept;
     OPTIONAL_EXPLICIT() quadruple(double value) noexcept;
 
-#if defined(DEXTENSIONS) && defined(__SIZEOF_INT128__)
+#if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
     static_assert(__SIZEOF_INT128__ == 16);
 
     OPTIONAL_EXPLICIT() quadruple(__int128 value) noexcept;

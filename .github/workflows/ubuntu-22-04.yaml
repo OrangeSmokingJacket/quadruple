@@ -13,6 +13,7 @@ jobs:
         build_type: ["Release", "Debug"]
         implicit_casts: ["ON", "OFF"]
         extensions: ["ON", "OFF"]
+        sanitizers: ["ON", "OFF"]
 
     steps:
     - uses: actions/checkout@v4
@@ -42,6 +43,7 @@ jobs:
         -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
         -DENABLE_EXTENSIONS=${{matrix.extensions}} \
         -DENABLE_IMPLICIT_CASTS=${{matrix.implicit_casts}} \
+        -DENABLE_ASAN=${{matrix.sanitizers}} \
         -DENABLE_TESTS=ON \
         ..
         cmake --build .
