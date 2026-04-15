@@ -6,7 +6,6 @@
 #include "test_helpers/test_utils.hpp"
 #include <cstring>
 #include <numbers>
-#include <iostream>
 
 #if defined(IMPLICIT_CASTS)
 constexpr bool implicit_conversion_allowed = true;
@@ -401,26 +400,6 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         REQUIRE(std::fetestexcept(FE_INVALID) == should_raise);
 
         // for some reason, without using both variables REQUIRE fails sometimes in Release build
-        // std::cout also prevents it
-        if constexpr (sizeof(ToType) > 8) {
-            Catch::cout() << "type: " << (std::is_signed_v<ToType> ? "int" : "uint") << sizeof(ToType) * 8 << std::endl;
-            Catch::cout() << "initial value: " << original_val << std::endl;
-            Catch::cout() << "static_cast:" << std::endl;
-            {
-                ToType copy = converted1;
-                Catch::cout() << "  low: " << static_cast<uint64_t>(copy) << std::endl;
-                copy >>= 64;
-                Catch::cout() << "  high: " << static_cast<uint64_t>(copy) << std::endl;
-            }
-            Catch::cout() << "through quadruple:" << std::endl;
-            {
-                ToType copy = converted2;
-                Catch::cout() << "  low: " << static_cast<uint64_t>(copy) << std::endl;
-                copy >>= 64;
-                Catch::cout() << "  high: " << static_cast<uint64_t>(copy) << std::endl;
-            }
-            Catch::cout() << std::endl;
-        }
         CAPTURE(converted1);
         CAPTURE(converted2);
         REQUIRE(converted1 == converted2);
