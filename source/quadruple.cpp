@@ -1,6 +1,6 @@
 #include "quadruple.hpp"
-#include "utils.hpp"
 #include "ub_consistency.hpp"
+#include "utils.hpp"
 
 #include <bit>
 #include <cassert>
@@ -18,14 +18,14 @@ static_assert(std::is_trivially_copy_assignable_v<quadruple>);
 static_assert(std::is_trivially_move_constructible_v<quadruple>);
 static_assert(std::is_trivially_move_assignable_v<quadruple>);
 
-
 quadruple::quadruple(uint64_t value) noexcept {
     if (value == 0) {
         return;
     }
 
     auto msb = most_significant_bit_position<uint64_t>(value);
-    uint64_t exponent_val = exponent_values::quadruple_exponent_zero + static_cast<uint16_t>(sizeof(uint64_t) * 8 - static_cast<uint64_t>(msb) - 1);
+    uint64_t exponent_val = exponent_values::quadruple_exponent_zero +
+                            static_cast<uint16_t>(sizeof(uint64_t) * 8 - static_cast<uint64_t>(msb) - 1);
     exponent_val <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
     assert((exponent_val & upper_mantissa_mask) == 0);
 
@@ -138,7 +138,7 @@ quadruple::quadruple(double value) noexcept {
     mantissa_val1 >>= quadruple_exponent_size - double_exponent_size;
     mantissa_val2 <<= sizeof(uint64_t) * 8 - (quadruple_exponent_size - double_exponent_size);
 
-     // handle edge cases (max and min exponent is not a power of 2)
+    // handle edge cases (max and min exponent is not a power of 2)
     if ((flat_value & double_exponent_max_mask) == double_exponent_max_mask) {
         exponent_val = quadruple_exponent_max;
         if ((flat_value & sign_bit_mask) == sign_bit_mask) {
@@ -203,7 +203,8 @@ quadruple::quadruple(unsigned __int128 value) noexcept {
     mantissa_calc split_value = std::bit_cast<mantissa_calc>(value);
 
     auto msb = split_value.most_significant_bit_position();
-    uint64_t exponent_val = exponent_values::quadruple_exponent_zero + static_cast<uint16_t>(sizeof(unsigned __int128) * 8 - static_cast<uint64_t>(msb) - 1);
+    uint64_t exponent_val = exponent_values::quadruple_exponent_zero +
+                            static_cast<uint16_t>(sizeof(unsigned __int128) * 8 - static_cast<uint64_t>(msb) - 1);
     exponent_val <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
     assert((exponent_val & upper_mantissa_mask) == 0);
 
@@ -254,7 +255,8 @@ quadruple::operator unsigned __int128() const noexcept {
             return static_cast<unsigned __int128>((__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000});
         } else {
             if (signbit()) {
-                return static_cast<unsigned __int128>((__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000});
+                return static_cast<unsigned __int128>((__int128{0x8000000000000000} << 64) +
+                                                      __int128{0x8000000000000000});
             } else {
                 return (unsigned __int128){0};
             }
@@ -286,22 +288,19 @@ quadruple::operator unsigned __int128() const noexcept {
         }
         auto res = std::bit_cast<unsigned __int128>(result_mantissa);
         if (signbit()) {
-            return (static_cast<unsigned __int128>(std::numeric_limits<uint64_t>::max()) + (unsigned __int128){1}) - res;
+            return (static_cast<unsigned __int128>(std::numeric_limits<uint64_t>::max()) + (unsigned __int128){1}) -
+                   res;
         } else {
-            return  std::bit_cast<unsigned __int128>(result_mantissa);
+            return std::bit_cast<unsigned __int128>(result_mantissa);
         }
     }
 }
 
 #endif
 
-quadruple::operator int8_t() const noexcept {
-    return static_cast<int8_t>(static_cast<int32_t>(*this));
-}
+quadruple::operator int8_t() const noexcept { return static_cast<int8_t>(static_cast<int32_t>(*this)); }
 
-quadruple::operator int16_t() const noexcept {
-    return static_cast<int16_t>(static_cast<int32_t>(*this));
-}
+quadruple::operator int16_t() const noexcept { return static_cast<int16_t>(static_cast<int32_t>(*this)); }
 
 quadruple::operator int32_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
@@ -365,13 +364,9 @@ quadruple::operator int64_t() const noexcept {
     }
 }
 
-quadruple::operator uint8_t() const noexcept {
-    return static_cast<uint8_t>(static_cast<int32_t>(*this));
-}
+quadruple::operator uint8_t() const noexcept { return static_cast<uint8_t>(static_cast<int32_t>(*this)); }
 
-quadruple::operator uint16_t() const noexcept {
-    return static_cast<uint16_t>(static_cast<int32_t>(*this));
-}
+quadruple::operator uint16_t() const noexcept { return static_cast<uint16_t>(static_cast<int32_t>(*this)); }
 
 quadruple::operator uint32_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
@@ -508,7 +503,8 @@ quadruple::operator float() const noexcept {
                 } else {
                     if (adj > 0) {
                         mantissa_val >>= adj - 1;
-                        requires_round = (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
+                        requires_round =
+                            (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
                         mantissa_val >>= 1;
                     }
                 }
@@ -532,8 +528,7 @@ quadruple::operator float() const noexcept {
 
     auto result = std::bit_cast<float>(float_bits);
     if ((forced_round && requires_round) ||
-        (!forced_round &&
-         is_bit_set<uint64_t, quadruple_exponent_size + float_mantissa_size + 1>(upper_) &&
+        (!forced_round && is_bit_set<uint64_t, quadruple_exponent_size + float_mantissa_size + 1>(upper_) &&
          (float_bits | single_bit_mask<uint32_t, 0>()) != single_bit_mask<uint32_t, 0>())) {
         if (is_bit_set<decltype(float_bits), 0>(float_bits)) {
             return std::nextafter(result, -std::numeric_limits<float>::infinity());
@@ -595,7 +590,8 @@ quadruple::operator double() const noexcept {
                 } else {
                     if (adj > 0) {
                         mantissa_val >>= adj - 1;
-                        requires_round = (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
+                        requires_round =
+                            (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
                         mantissa_val >>= 1;
                     }
                 }
@@ -617,8 +613,7 @@ quadruple::operator double() const noexcept {
 
     auto result = std::bit_cast<double>(double_bits);
     if ((forced_round && requires_round) ||
-        (!forced_round &&
-         is_bit_set<decltype(lower_), quadruple_exponent_size - double_exponent_size>(lower_) &&
+        (!forced_round && is_bit_set<decltype(lower_), quadruple_exponent_size - double_exponent_size>(lower_) &&
          (double_bits | sign_bit_mask) != sign_bit_mask)) {
         if (is_bit_set<decltype(double_bits), 0>(double_bits)) {
             return std::nextafter(result, -std::numeric_limits<double>::infinity());
@@ -635,9 +630,7 @@ bool quadruple::is_zero() const noexcept {
     return (upper_ | zero_mask) == zero_mask && lower_ == 0;
 }
 
-bool quadruple::is_NaN() const noexcept {
-    return is_quiet_NaN() || is_signaling_NaN();
-}
+bool quadruple::is_NaN() const noexcept { return is_quiet_NaN() || is_signaling_NaN(); }
 
 bool quadruple::is_quiet_NaN() const noexcept {
     return (upper_ == 0x7FFFFFFFFFFFFFFF || upper_ == 0xFFFFFFFFFFFFFFFF) && lower_ == 0xFFFFFFFFFFFFFFFF;
@@ -652,41 +645,23 @@ bool quadruple::is_subnormal() const noexcept {
     return (upper_ & subnormal_mask) == 0 && ((upper_ & upper_mantissa_mask) != 0 || lower_ != 0);
 }
 
-bool quadruple::signbit() const noexcept {
-    return (upper_ & sign_bit_mask) != 0;
-}
+bool quadruple::signbit() const noexcept { return (upper_ & sign_bit_mask) != 0; }
 
-quadruple quadruple::quiet_NaN() noexcept {
-    return {0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF};
-}
+quadruple quadruple::quiet_NaN() noexcept { return {0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
 
-quadruple quadruple::negative_quiet_NaN() noexcept {
-    return {0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF};
-}
+quadruple quadruple::negative_quiet_NaN() noexcept { return {0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
 
-quadruple quadruple::signaling_NaN() noexcept {
-    return {0x7FFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA};
-}
+quadruple quadruple::signaling_NaN() noexcept { return {0x7FFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA}; }
 
-quadruple quadruple::negative_signaling_NaN() noexcept {
-    return {0xFFFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA};
-}
+quadruple quadruple::negative_signaling_NaN() noexcept { return {0xFFFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA}; }
 
-quadruple quadruple::infinity() noexcept {
-    return {0x7FFF000000000000, 0};
-}
+quadruple quadruple::infinity() noexcept { return {0x7FFF000000000000, 0}; }
 
-quadruple quadruple::negative_infinity() noexcept {
-    return {0xFFFF000000000000, 0};
-}
+quadruple quadruple::negative_infinity() noexcept { return {0xFFFF000000000000, 0}; }
 
-quadruple quadruple::max() noexcept {
-    return {0x7FFEFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF};
-}
+quadruple quadruple::max() noexcept { return {0x7FFEFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
 
-quadruple quadruple::min() noexcept {
-    return {0x0001000000000000, 0};
-}
+quadruple quadruple::min() noexcept { return {0x0001000000000000, 0}; }
 
 quadruple& quadruple::flip_sign() noexcept {
     upper_ ^= sign_bit_mask;
@@ -919,9 +894,7 @@ bool quadruple::operator==(const quadruple& rhs) const noexcept {
     return upper_ == rhs.upper_ && lower_ == rhs.lower_;
 }
 
-bool quadruple::operator!=(const quadruple& rhs) const noexcept {
-    return !operator==(rhs);
-}
+bool quadruple::operator!=(const quadruple& rhs) const noexcept { return !operator==(rhs); }
 
 bool quadruple::operator<(const quadruple& rhs) const noexcept {
     if (is_NaN() || rhs.is_NaN()) {
@@ -945,17 +918,11 @@ bool quadruple::operator<(const quadruple& rhs) const noexcept {
     }
 }
 
-bool quadruple::operator<=(const quadruple& rhs) const noexcept {
-    return operator==(rhs) || operator<(rhs);
-}
+bool quadruple::operator<=(const quadruple& rhs) const noexcept { return operator==(rhs) || operator<(rhs); }
 
-bool quadruple::operator>(const quadruple& rhs) const noexcept {
-    return rhs.operator<(*this);
-}
+bool quadruple::operator>(const quadruple& rhs) const noexcept { return rhs.operator<(*this); }
 
-bool quadruple::operator>=(const quadruple& rhs) const noexcept {
-    return !operator<(rhs);
-}
+bool quadruple::operator>=(const quadruple& rhs) const noexcept { return !operator<(rhs); }
 
 std::partial_ordering quadruple::operator<=>(const quadruple& rhs) const noexcept {
     if (*this == rhs) {
@@ -973,9 +940,7 @@ quadruple::quadruple(uint64_t upper, uint64_t lower) noexcept
     : lower_(lower)
     , upper_(upper) {}
 
-bool quadruple::mantissa_calc::is_zero() const noexcept {
-    return upper == 0 && lower == 0;
-}
+bool quadruple::mantissa_calc::is_zero() const noexcept { return upper == 0 && lower == 0; }
 
 // returns 128, if there is no bits set
 int quadruple::mantissa_calc::most_significant_bit_position() const noexcept {

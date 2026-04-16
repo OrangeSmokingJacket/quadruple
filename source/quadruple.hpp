@@ -7,7 +7,7 @@
 // TODO: constexpr
 
 // Designed to fit IEEE 754 standard
-class quadruple final{
+class quadruple final {
 public:
     quadruple() noexcept = default;
     quadruple(const quadruple&) noexcept = default;
@@ -16,8 +16,10 @@ public:
     quadruple& operator=(quadruple&&) noexcept = default;
     ~quadruple() noexcept = default;
 
-    template <typename T> requires std::is_integral_v<T>
-    OPTIONAL_EXPLICIT() quadruple(T value) noexcept;
+    template<typename T>
+    requires std::is_integral_v<T>
+    OPTIONAL_EXPLICIT()
+    quadruple(T value) noexcept;
     OPTIONAL_EXPLICIT() quadruple(uint64_t value) noexcept;
 
     OPTIONAL_EXPLICIT() quadruple(float value) noexcept;
@@ -107,7 +109,8 @@ private:
     [[nodiscard]] inline mantissa_calc convert_mantissa() const;
 };
 
-template <typename T> requires std::is_integral_v<T>
+template<typename T>
+requires std::is_integral_v<T>
 quadruple::quadruple(T value) noexcept
     : quadruple(value < 0 ? static_cast<uint64_t>(-value) : static_cast<uint64_t>(value)) {
     if (value < 0) {

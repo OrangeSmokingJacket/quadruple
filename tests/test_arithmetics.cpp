@@ -1,15 +1,14 @@
-#include <cfenv>
 #include <catch2/catch_all.hpp>
+#include <cfenv>
 
 #include "quadruple.hpp"
-#include "utils.hpp"
 #include "test_helpers/test_utils.hpp"
+#include "utils.hpp"
 
 #include <cstring>
 #include <numbers>
 
 TEMPLATE_TEST_CASE("unary operators", "[arithmetics]", float, double) {
-
     auto check_plus = [](TestType val) {
         quadruple val_converted_1 = quadruple{+val};
         quadruple val_converted_2 = +quadruple{val};
@@ -22,7 +21,6 @@ TEMPLATE_TEST_CASE("unary operators", "[arithmetics]", float, double) {
         // compare bits
         REQUIRE(std::memcmp(&val_converted_1, &val_converted_2, sizeof(quadruple)) == 0);
     };
-
 
     SECTION("positive") {
         SECTION("constants") {
@@ -170,33 +168,15 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
 
     SECTION("positive") {
         SECTION("constants") {
-            SECTION("pi") {
-                check_addition(std::numbers::pi_v<TestType>);
-            }
-            SECTION("e") {
-                check_addition(std::numbers::e_v<TestType>);
-            }
-            SECTION("phi") {
-                check_addition(std::numbers::phi_v<TestType>);
-            }
-            SECTION("sqrt2") {
-                check_addition(std::numbers::sqrt2_v<TestType>);
-            }
-            SECTION("sqrt3") {
-                check_addition(std::numbers::sqrt3_v<TestType>);
-            }
-            SECTION("inv_sqrtpi") {
-                check_addition(std::numbers::inv_sqrtpi_v<TestType>);
-            }
-            SECTION("infinity") {
-                check_addition(std::numeric_limits<TestType>::infinity());
-            }
-            SECTION("qNaN") {
-                check_addition(std::numeric_limits<TestType>::quiet_NaN());
-            }
-            SECTION("sNaN") {
-                check_addition(std::numeric_limits<TestType>::signaling_NaN());
-            }
+            SECTION("pi") { check_addition(std::numbers::pi_v<TestType>); }
+            SECTION("e") { check_addition(std::numbers::e_v<TestType>); }
+            SECTION("phi") { check_addition(std::numbers::phi_v<TestType>); }
+            SECTION("sqrt2") { check_addition(std::numbers::sqrt2_v<TestType>); }
+            SECTION("sqrt3") { check_addition(std::numbers::sqrt3_v<TestType>); }
+            SECTION("inv_sqrtpi") { check_addition(std::numbers::inv_sqrtpi_v<TestType>); }
+            SECTION("infinity") { check_addition(std::numeric_limits<TestType>::infinity()); }
+            SECTION("qNaN") { check_addition(std::numeric_limits<TestType>::quiet_NaN()); }
+            SECTION("sNaN") { check_addition(std::numeric_limits<TestType>::signaling_NaN()); }
         }
         SECTION("random numbers") {
             auto generated = generate_normal_numbers<TestType>(test_size);
@@ -215,30 +195,14 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
 
     SECTION("negative") {
         SECTION("constants") {
-            SECTION("pi") {
-                check_addition(-std::numbers::pi_v<TestType>);
-            }
-            SECTION("e") {
-                check_addition(-std::numbers::e_v<TestType>);
-            }
-            SECTION("phi") {
-                check_addition(-std::numbers::phi_v<TestType>);
-            }
-            SECTION("sqrt2") {
-                check_addition(-std::numbers::sqrt2_v<TestType>);
-            }
-            SECTION("sqrt3") {
-                check_addition(-std::numbers::sqrt3_v<TestType>);
-            }
-            SECTION("inv_sqrtpi") {
-                check_addition(-std::numbers::inv_sqrtpi_v<TestType>);
-            }
-            SECTION("infinity") {
-                check_addition(-std::numeric_limits<TestType>::infinity());
-            }
-            SECTION("sNaN") {
-                check_addition(-std::numeric_limits<TestType>::signaling_NaN());
-            }
+            SECTION("pi") { check_addition(-std::numbers::pi_v<TestType>); }
+            SECTION("e") { check_addition(-std::numbers::e_v<TestType>); }
+            SECTION("phi") { check_addition(-std::numbers::phi_v<TestType>); }
+            SECTION("sqrt2") { check_addition(-std::numbers::sqrt2_v<TestType>); }
+            SECTION("sqrt3") { check_addition(-std::numbers::sqrt3_v<TestType>); }
+            SECTION("inv_sqrtpi") { check_addition(-std::numbers::inv_sqrtpi_v<TestType>); }
+            SECTION("infinity") { check_addition(-std::numeric_limits<TestType>::infinity()); }
+            SECTION("sNaN") { check_addition(-std::numeric_limits<TestType>::signaling_NaN()); }
         }
         SECTION("random numbers") {
             auto generated = generate_normal_numbers<TestType>(test_size);
@@ -312,9 +276,7 @@ TEMPLATE_TEST_CASE("addition", "[arithmetics]", float, double) {
     }
 
     SECTION("signed zero") {
-        SECTION("+/+") {
-            REQUIRE(std::signbit(TestType{} + TestType{}) == (quadruple{} + quadruple{}).signbit());
-        }
+        SECTION("+/+") { REQUIRE(std::signbit(TestType{} + TestType{}) == (quadruple{} + quadruple{}).signbit()); }
         SECTION("+/-") {
             REQUIRE(std::signbit(TestType{} + (-TestType{})) == (quadruple{} + (-quadruple{})).signbit());
         }
@@ -368,33 +330,15 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
     SECTION("keep sign") {
         SECTION("positive") {
             SECTION("constants") {
-                SECTION("pi") {
-                    check_subtraction_same(std::numbers::pi_v<TestType>);
-                }
-                SECTION("e") {
-                    check_subtraction_same(std::numbers::e_v<TestType>);
-                }
-                SECTION("phi") {
-                    check_subtraction_same(std::numbers::phi_v<TestType>);
-                }
-                SECTION("sqrt2") {
-                    check_subtraction_same(std::numbers::sqrt2_v<TestType>);
-                }
-                SECTION("sqrt3") {
-                    check_subtraction_same(std::numbers::sqrt3_v<TestType>);
-                }
-                SECTION("inv_sqrtpi") {
-                    check_subtraction_same(std::numbers::inv_sqrtpi_v<TestType>);
-                }
-                SECTION("infinity") {
-                    check_subtraction_same(std::numeric_limits<TestType>::infinity());
-                }
-                SECTION("qNaN") {
-                    check_subtraction_same(std::numeric_limits<TestType>::quiet_NaN());
-                }
-                SECTION("sNaN") {
-                    check_subtraction_same(std::numeric_limits<TestType>::signaling_NaN());
-                }
+                SECTION("pi") { check_subtraction_same(std::numbers::pi_v<TestType>); }
+                SECTION("e") { check_subtraction_same(std::numbers::e_v<TestType>); }
+                SECTION("phi") { check_subtraction_same(std::numbers::phi_v<TestType>); }
+                SECTION("sqrt2") { check_subtraction_same(std::numbers::sqrt2_v<TestType>); }
+                SECTION("sqrt3") { check_subtraction_same(std::numbers::sqrt3_v<TestType>); }
+                SECTION("inv_sqrtpi") { check_subtraction_same(std::numbers::inv_sqrtpi_v<TestType>); }
+                SECTION("infinity") { check_subtraction_same(std::numeric_limits<TestType>::infinity()); }
+                SECTION("qNaN") { check_subtraction_same(std::numeric_limits<TestType>::quiet_NaN()); }
+                SECTION("sNaN") { check_subtraction_same(std::numeric_limits<TestType>::signaling_NaN()); }
             }
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
@@ -413,33 +357,15 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
 
         SECTION("negative") {
             SECTION("constants") {
-                SECTION("pi") {
-                    check_subtraction_same(-std::numbers::pi_v<TestType>);
-                }
-                SECTION("e") {
-                    check_subtraction_same(-std::numbers::e_v<TestType>);
-                }
-                SECTION("phi") {
-                    check_subtraction_same(-std::numbers::phi_v<TestType>);
-                }
-                SECTION("sqrt2") {
-                    check_subtraction_same(-std::numbers::sqrt2_v<TestType>);
-                }
-                SECTION("sqrt3") {
-                    check_subtraction_same(-std::numbers::sqrt3_v<TestType>);
-                }
-                SECTION("inv_sqrtpi") {
-                    check_subtraction_same(-std::numbers::inv_sqrtpi_v<TestType>);
-                }
-                SECTION("infinity") {
-                    check_subtraction_same(-std::numeric_limits<TestType>::infinity());
-                }
-                SECTION("qNaN") {
-                    check_subtraction_same(-std::numeric_limits<TestType>::quiet_NaN());
-                }
-                SECTION("sNaN") {
-                    check_subtraction_same(negative_sNaN<TestType>());
-                }
+                SECTION("pi") { check_subtraction_same(-std::numbers::pi_v<TestType>); }
+                SECTION("e") { check_subtraction_same(-std::numbers::e_v<TestType>); }
+                SECTION("phi") { check_subtraction_same(-std::numbers::phi_v<TestType>); }
+                SECTION("sqrt2") { check_subtraction_same(-std::numbers::sqrt2_v<TestType>); }
+                SECTION("sqrt3") { check_subtraction_same(-std::numbers::sqrt3_v<TestType>); }
+                SECTION("inv_sqrtpi") { check_subtraction_same(-std::numbers::inv_sqrtpi_v<TestType>); }
+                SECTION("infinity") { check_subtraction_same(-std::numeric_limits<TestType>::infinity()); }
+                SECTION("qNaN") { check_subtraction_same(-std::numeric_limits<TestType>::quiet_NaN()); }
+                SECTION("sNaN") { check_subtraction_same(negative_sNaN<TestType>()); }
             }
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
@@ -460,33 +386,15 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
     SECTION("change sign") {
         SECTION("positive") {
             SECTION("constants") {
-                SECTION("pi") {
-                    check_subtraction_different(std::numbers::pi_v<TestType>);
-                }
-                SECTION("e") {
-                    check_subtraction_different(std::numbers::e_v<TestType>);
-                }
-                SECTION("phi") {
-                    check_subtraction_different(std::numbers::phi_v<TestType>);
-                }
-                SECTION("sqrt2") {
-                    check_subtraction_different(std::numbers::sqrt2_v<TestType>);
-                }
-                SECTION("sqrt3") {
-                    check_subtraction_different(std::numbers::sqrt3_v<TestType>);
-                }
-                SECTION("inv_sqrtpi") {
-                    check_subtraction_different(std::numbers::inv_sqrtpi_v<TestType>);
-                }
-                SECTION("infinity") {
-                    check_subtraction_different(std::numeric_limits<TestType>::infinity());
-                }
-                SECTION("qNaN") {
-                    check_subtraction_different(std::numeric_limits<TestType>::quiet_NaN());
-                }
-                SECTION("sNaN") {
-                    check_subtraction_different(std::numeric_limits<TestType>::signaling_NaN());
-                }
+                SECTION("pi") { check_subtraction_different(std::numbers::pi_v<TestType>); }
+                SECTION("e") { check_subtraction_different(std::numbers::e_v<TestType>); }
+                SECTION("phi") { check_subtraction_different(std::numbers::phi_v<TestType>); }
+                SECTION("sqrt2") { check_subtraction_different(std::numbers::sqrt2_v<TestType>); }
+                SECTION("sqrt3") { check_subtraction_different(std::numbers::sqrt3_v<TestType>); }
+                SECTION("inv_sqrtpi") { check_subtraction_different(std::numbers::inv_sqrtpi_v<TestType>); }
+                SECTION("infinity") { check_subtraction_different(std::numeric_limits<TestType>::infinity()); }
+                SECTION("qNaN") { check_subtraction_different(std::numeric_limits<TestType>::quiet_NaN()); }
+                SECTION("sNaN") { check_subtraction_different(std::numeric_limits<TestType>::signaling_NaN()); }
             }
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
@@ -504,33 +412,15 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
         }
         SECTION("negative") {
             SECTION("constants") {
-                SECTION("pi") {
-                    check_subtraction_different(-std::numbers::pi_v<TestType>);
-                }
-                SECTION("e") {
-                    check_subtraction_different(-std::numbers::e_v<TestType>);
-                }
-                SECTION("phi") {
-                    check_subtraction_different(-std::numbers::phi_v<TestType>);
-                }
-                SECTION("sqrt2") {
-                    check_subtraction_different(-std::numbers::sqrt2_v<TestType>);
-                }
-                SECTION("sqrt3") {
-                    check_subtraction_different(-std::numbers::sqrt3_v<TestType>);
-                }
-                SECTION("inv_sqrtpi") {
-                    check_subtraction_different(-std::numbers::inv_sqrtpi_v<TestType>);
-                }
-                SECTION("infinity") {
-                    check_subtraction_different(-std::numeric_limits<TestType>::infinity());
-                }
-                SECTION("qNaN") {
-                    check_subtraction_different(-std::numeric_limits<TestType>::quiet_NaN());
-                }
-                SECTION("sNaN") {
-                    check_subtraction_different(negative_sNaN<TestType>());
-                }
+                SECTION("pi") { check_subtraction_different(-std::numbers::pi_v<TestType>); }
+                SECTION("e") { check_subtraction_different(-std::numbers::e_v<TestType>); }
+                SECTION("phi") { check_subtraction_different(-std::numbers::phi_v<TestType>); }
+                SECTION("sqrt2") { check_subtraction_different(-std::numbers::sqrt2_v<TestType>); }
+                SECTION("sqrt3") { check_subtraction_different(-std::numbers::sqrt3_v<TestType>); }
+                SECTION("inv_sqrtpi") { check_subtraction_different(-std::numbers::inv_sqrtpi_v<TestType>); }
+                SECTION("infinity") { check_subtraction_different(-std::numeric_limits<TestType>::infinity()); }
+                SECTION("qNaN") { check_subtraction_different(-std::numeric_limits<TestType>::quiet_NaN()); }
+                SECTION("sNaN") { check_subtraction_different(negative_sNaN<TestType>()); }
             }
             SECTION("random numbers") {
                 auto generated = generate_normal_numbers<TestType>(test_size);
@@ -549,9 +439,7 @@ TEMPLATE_TEST_CASE("subtraction", "[arithmetics]", float, double) {
     }
 
     SECTION("signed zero") {
-        SECTION("+/+") {
-            REQUIRE(std::signbit(TestType{} - TestType{}) == (quadruple{} - quadruple{}).signbit());
-        }
+        SECTION("+/+") { REQUIRE(std::signbit(TestType{} - TestType{}) == (quadruple{} - quadruple{}).signbit()); }
         SECTION("+/-") {
             REQUIRE(std::signbit(TestType{} - (-TestType{})) == (quadruple{} - (-quadruple{})).signbit());
         }
