@@ -1,6 +1,6 @@
-#include <catch2/catch_all.hpp>
 #include "test_helpers/test_utils.hpp"
 #include "quadruple.hpp"
+#include <catch2/catch_all.hpp>
 #include <random>
 
 #include "ub_consistency.hpp"
@@ -21,7 +21,7 @@ TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
     using FromType = std::tuple_element<0, TestType>::type;
     using ToType = std::tuple_element<1, TestType>::type;
     SECTION("positive") {
-        if constexpr(std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
+        if constexpr (std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
             // float to (u)int128 can not overflow
             SECTION("overflow") {
                 double val = std::numeric_limits<FromType>::max();
@@ -49,7 +49,7 @@ TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
     }
 
     SECTION("negative") {
-        if constexpr(std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
+        if constexpr (std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
             // float to (u)int128 can not overflow
             SECTION("overflow") {
                 FromType val = -std::numeric_limits<FromType>::max();
@@ -109,45 +109,41 @@ struct custom_type_packer {};
 
 using dummy_type = void*;
 
-// Catch2 only excepts fully instantiated types, so we pass some instantiation and rebind it inside
+// Catch2 only excepts fully instantiated types, so we pass some instantiation
+// and rebind it inside
 TEMPLATE_TEST_CASE("types cross product", "[utils]", std::tuple<dummy_type>, custom_type_packer<dummy_type>) {
     SECTION("equal count") {
-        STATIC_REQUIRE(std::is_same_v<
-                           typename types_cross_product<rebind_with<TestType, int, char>, rebind_with<TestType, bool, std::vector<int>>>::type,
-                           rebind_with<TestType,
-                               rebind_with<TestType, int, bool>,
-                               rebind_with<TestType, int, std::vector<int>>,
-                               rebind_with<TestType, char, bool>,
-                               rebind_with<TestType, char, std::vector<int>>
-                           >
-                       >);
+        STATIC_REQUIRE(std::is_same_v<typename types_cross_product<rebind_with<TestType, int, char>,
+                                                                   rebind_with<TestType, bool, std::vector<int>>>::type,
+                                      rebind_with<TestType,
+                                                  rebind_with<TestType, int, bool>,
+                                                  rebind_with<TestType, int, std::vector<int>>,
+                                                  rebind_with<TestType, char, bool>,
+                                                  rebind_with<TestType, char, std::vector<int>>>>);
     }
 
     SECTION("left is bigger") {
-        STATIC_REQUIRE(std::is_same_v<
-                           typename types_cross_product<rebind_with<TestType, int, char, bool>, rebind_with<TestType, bool, std::vector<int>>>::type,
-                           rebind_with<TestType,
-                               rebind_with<TestType, int, bool>,
-                               rebind_with<TestType, int, std::vector<int>>,
-                               rebind_with<TestType, char, bool>,
-                               rebind_with<TestType, char, std::vector<int>>,
-                               rebind_with<TestType, bool, bool>,
-                               rebind_with<TestType, bool, std::vector<int>>
-                           >
-                       >);
+        STATIC_REQUIRE(std::is_same_v<typename types_cross_product<rebind_with<TestType, int, char, bool>,
+                                                                   rebind_with<TestType, bool, std::vector<int>>>::type,
+                                      rebind_with<TestType,
+                                                  rebind_with<TestType, int, bool>,
+                                                  rebind_with<TestType, int, std::vector<int>>,
+                                                  rebind_with<TestType, char, bool>,
+                                                  rebind_with<TestType, char, std::vector<int>>,
+                                                  rebind_with<TestType, bool, bool>,
+                                                  rebind_with<TestType, bool, std::vector<int>>>>);
     }
 
     SECTION("right is bigger") {
         STATIC_REQUIRE(std::is_same_v<
-                           typename types_cross_product<rebind_with<TestType, int, char>, rebind_with<TestType, bool, std::vector<int>, std::string>>::type,
-                           rebind_with<TestType,
-                               rebind_with<TestType, int, bool>,
-                               rebind_with<TestType, int, std::vector<int>>,
-                               rebind_with<TestType, int, std::string>,
-                               rebind_with<TestType, char, bool>,
-                               rebind_with<TestType, char, std::vector<int>>,
-                               rebind_with<TestType, char, std::string>
-                           >
-                       >);
+                       typename types_cross_product<rebind_with<TestType, int, char>,
+                                                    rebind_with<TestType, bool, std::vector<int>, std::string>>::type,
+                       rebind_with<TestType,
+                                   rebind_with<TestType, int, bool>,
+                                   rebind_with<TestType, int, std::vector<int>>,
+                                   rebind_with<TestType, int, std::string>,
+                                   rebind_with<TestType, char, bool>,
+                                   rebind_with<TestType, char, std::vector<int>>,
+                                   rebind_with<TestType, char, std::string>>>);
     }
 }

@@ -2,8 +2,8 @@
 
 #include "quadruple.hpp"
 #include "utils.hpp"
-#include <test_helpers/test_utils.hpp>
 #include <cstring>
+#include <test_helpers/test_utils.hpp>
 
 TEMPLATE_TEST_CASE("conversion", "[benchmark]", float, double) {
     SECTION("positive") {

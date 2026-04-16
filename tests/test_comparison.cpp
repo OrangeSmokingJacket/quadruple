@@ -1,23 +1,15 @@
-#include <cstring>
 #include <catch2/catch_all.hpp>
+#include <cstring>
 
 #include "quadruple.hpp"
 #include "test_helpers/test_utils.hpp"
 
 TEST_CASE("equals", "[comparison]") {
     SECTION("signed zeros") {
-        SECTION("+/+") {
-            REQUIRE(quadruple{} == quadruple{});
-        }
-        SECTION("+/-") {
-            REQUIRE(quadruple{} == (-quadruple{}));
-        }
-        SECTION("-/+") {
-            REQUIRE((-quadruple{}) == quadruple{});
-        }
-        SECTION("-/-") {
-            REQUIRE((-quadruple{}) == (-quadruple{}));
-        }
+        SECTION("+/+") { REQUIRE(quadruple{} == quadruple{}); }
+        SECTION("+/-") { REQUIRE(quadruple{} == (-quadruple{})); }
+        SECTION("-/+") { REQUIRE((-quadruple{}) == quadruple{}); }
+        SECTION("-/-") { REQUIRE((-quadruple{}) == (-quadruple{})); }
     }
     SECTION("NaN") {
         SECTION("+0") {
@@ -55,18 +47,10 @@ TEST_CASE("equals", "[comparison]") {
 
 TEST_CASE("not equals", "[comparison]") {
     SECTION("signed zeros") {
-        SECTION("+/+") {
-            REQUIRE_FALSE(quadruple{} != quadruple{});
-        }
-        SECTION("+/-") {
-            REQUIRE_FALSE(quadruple{} != (-quadruple{}));
-        }
-        SECTION("-/+") {
-            REQUIRE_FALSE((-quadruple{}) != quadruple{});
-        }
-        SECTION("-/-") {
-            REQUIRE_FALSE((-quadruple{}) != (-quadruple{}));
-        }
+        SECTION("+/+") { REQUIRE_FALSE(quadruple{} != quadruple{}); }
+        SECTION("+/-") { REQUIRE_FALSE(quadruple{} != (-quadruple{})); }
+        SECTION("-/+") { REQUIRE_FALSE((-quadruple{}) != quadruple{}); }
+        SECTION("-/-") { REQUIRE_FALSE((-quadruple{}) != (-quadruple{})); }
     }
     SECTION("NaN") {
         SECTION("+0") {
@@ -104,18 +88,10 @@ TEST_CASE("not equals", "[comparison]") {
 
 TEST_CASE("spaceship", "[comparison]") {
     SECTION("signed zeros") {
-        SECTION("+/+") {
-            REQUIRE((quadruple{} <=> quadruple{}) == std::partial_ordering::equivalent);
-        }
-        SECTION("+/-") {
-            REQUIRE((quadruple{} <=> (-quadruple{})) == std::partial_ordering::equivalent);
-        }
-        SECTION("-/+") {
-            REQUIRE(((-quadruple{}) <=> quadruple{}) == std::partial_ordering::equivalent);
-        }
-        SECTION("-/-") {
-            REQUIRE(((-quadruple{}) <=> (-quadruple{})) == std::partial_ordering::equivalent);
-        }
+        SECTION("+/+") { REQUIRE((quadruple{} <=> quadruple{}) == std::partial_ordering::equivalent); }
+        SECTION("+/-") { REQUIRE((quadruple{} <=> (-quadruple{})) == std::partial_ordering::equivalent); }
+        SECTION("-/+") { REQUIRE(((-quadruple{}) <=> quadruple{}) == std::partial_ordering::equivalent); }
+        SECTION("-/-") { REQUIRE(((-quadruple{}) <=> (-quadruple{})) == std::partial_ordering::equivalent); }
     }
     SECTION("NaN") {
         SECTION("+0") {
@@ -151,23 +127,24 @@ TEST_CASE("spaceship", "[comparison]") {
     }
 }
 
-TEMPLATE_TEST_CASE_SIG("less and derivatives", "[comparison]",
-    ((typename ValueType, typename ComparatorType), ValueType, ComparatorType),
-    (float, std::less<>),
-    (float, std::less_equal<>),
-    (float, std::greater<>),
-    (float, std::greater_equal<>),
-    (double, std::less<>),
-    (double, std::less_equal<>),
-    (double, std::greater<>),
-    (double, std::greater_equal<>)) {
-
+TEMPLATE_TEST_CASE_SIG("less and derivatives",
+                       "[comparison]",
+                       ((typename ValueType, typename ComparatorType), ValueType, ComparatorType),
+                       (float, std::less<>),
+                       (float, std::less_equal<>),
+                       (float, std::greater<>),
+                       (float, std::greater_equal<>),
+                       (double, std::less<>),
+                       (double, std::less_equal<>),
+                       (double, std::greater<>),
+                       (double, std::greater_equal<>)) {
     SECTION("constants") {
         std::vector<ValueType> values;
         std::vector<quadruple> converted;
 
         // Fill vector
-        // zeros are equal no matter the sign, and NaN are not ordered, so they are absent from the test
+        // zeros are equal no matter the sign, and NaN are not ordered, so they are
+        // absent from the test
         values.emplace_back(ValueType{});
         values.emplace_back(std::numbers::pi_v<ValueType>);
         values.emplace_back(-std::numbers::pi_v<ValueType>);

@@ -9,7 +9,8 @@ static constexpr size_t benchmark_size = 10000;
 // TODO: increase to million or bigger
 static constexpr size_t test_size = 10000;
 
-// generates sequence via mt19937(_64) using default seed for the repeatability (only positive values)
+// generates sequence via mt19937(_64) using default seed for the repeatability
+// (only positive values)
 template <typename T>
 std::vector<T> generate_normal_numbers(size_t count);
 template <typename T>
@@ -53,7 +54,7 @@ std::vector<unsigned __int128> generate_normal_numbers(size_t count);
 
 #endif
 
-template<typename T>
+template <typename T>
 void remove_NaNs(std::vector<T>& vector) {
     for (auto it = vector.begin(); it != vector.end();) {
         if (std::isnan(*it)) {
@@ -63,9 +64,8 @@ void remove_NaNs(std::vector<T>& vector) {
         }
     }
 }
-template<>
+template <>
 void remove_NaNs(std::vector<quadruple>& vector);
-
 
 namespace impl {
 
@@ -100,26 +100,23 @@ struct types_cross_product<Packer<LeftTypes...>, Packer<RightTypes...>> {
     using type = merge_types<typename impl::one_side_permutation<LeftTypes, Packer<RightTypes...>>::type...>::type;
 };
 
-template<typename T>
+template <typename T>
 struct rebind;
 
-template<template<typename...> class C, typename... Args>
+template <template <typename...> class C, typename... Args>
 struct rebind<C<Args...>> {
-    template<typename... NewArgs>
+    template <typename... NewArgs>
     using with = C<NewArgs...>;
 };
 
-template<typename T, typename... NewArgs>
+template <typename T, typename... NewArgs>
 using rebind_with = typename rebind<T>::template with<NewArgs...>;
 
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
-using integer_types = std::tuple<
-    int8_t, int16_t, int32_t, int64_t, __int128,
-    uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
+using integer_types =
+    std::tuple<int8_t, int16_t, int32_t, int64_t, __int128, uint8_t, uint16_t, uint32_t, uint64_t, unsigned __int128>;
 #else
-using integer_types = std::tuple<
-    int8_t, int16_t, int32_t, int64_t,
-    uint8_t, uint16_t, uint32_t, uint64_t>;
+using integer_types = std::tuple<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t>;
 #endif
 
 using all_constructable_types = merge_types<integer_types, std::tuple<float, double>>::type;

@@ -5,14 +5,14 @@
 
 namespace {
     template <typename T, typename U>
-    concept FloatUintPair = requires
-    {
+    concept FloatUintPair = requires {
         std::is_floating_point_v<T>;
         std::is_unsigned_v<U>;
         sizeof(T) == sizeof(U);
     };
 
-    template <typename T, typename U, bool allow_subnormals, typename Generator> requires FloatUintPair<T, U>
+    template <typename T, typename U, bool allow_subnormals, typename Generator>
+    requires FloatUintPair<T, U>
     std::vector<T> generate_sequence(Generator& generator, U mask, size_t count) {
         std::vector<T> result;
         result.reserve(count);
@@ -54,7 +54,8 @@ namespace {
         return result;
     }
 
-    template<typename T, typename Generator> requires (sizeof(T) <= sizeof(uint64_t))
+    template <typename T, typename Generator>
+    requires(sizeof(T) <= sizeof(uint64_t))
     std::vector<T> generate_integer_sequence(Generator& generator, uint64_t mask, size_t count) {
         std::vector<T> result;
         result.reserve(count);
@@ -66,7 +67,8 @@ namespace {
 
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 
-    template<typename T, typename Generator>  requires (sizeof(T) == __SIZEOF_INT128__)
+    template <typename T, typename Generator>
+    requires(sizeof(T) == __SIZEOF_INT128__)
     std::vector<T> generate_integer_sequence(Generator& generator, uint64_t mask, size_t count) {
         struct low_high {
             uint64_t low;
@@ -85,7 +87,7 @@ namespace {
 
 #endif
 
-}
+} // namespace
 
 template <>
 std::vector<int8_t> generate_normal_numbers(size_t count) {
@@ -182,8 +184,8 @@ template <>
 std::vector<quadruple> generate_subnormal_numbers(size_t count) {
     static constexpr uint64_t quadruple_upper_mask = 0x0000FFFFFFFFFFFF;
     std::mt19937_64 generator{};
-    return generate_sequence<true>(generator, quadruple_upper_mask, count);}
-
+    return generate_sequence<true>(generator, quadruple_upper_mask, count);
+}
 
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 
@@ -200,7 +202,6 @@ std::vector<unsigned __int128> generate_normal_numbers(size_t count) {
     std::mt19937_64 generator{};
     return generate_integer_sequence<unsigned __int128>(generator, uint128_upper_mask, count);
 }
-
 
 #endif
 

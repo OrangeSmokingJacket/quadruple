@@ -1,13 +1,13 @@
 #pragma once
 #include <bit>
-#include <cstdint>
 #include <bitset>
+#include <cstdint>
 #include <type_traits>
 
 #if defined(IMPLICIT_CASTS)
-#define OPTIONAL_EXPLICIT()
+    #define OPTIONAL_EXPLICIT()
 #else
-#define OPTIONAL_EXPLICIT() explicit
+    #define OPTIONAL_EXPLICIT() explicit
 #endif
 
 constexpr size_t float_exponent_size = 8;
@@ -32,12 +32,13 @@ namespace exponent_values {
     constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
     constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
     constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
-    constexpr uint16_t min_double_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (double_exponent_size - 1)) + 1;
+    constexpr uint16_t min_double_exponent =
+        quadruple_exponent_max / 2 - (uint16_t{1} << (double_exponent_size - 1)) + 1;
 } // namespace exponent_values
 
 constexpr uint64_t float_exponent_filler = 0x3F80000000000000;
 constexpr uint64_t double_exponent_filler = 0x3C00000000000000;
-constexpr uint64_t float_subnormal_exponent_filler =  0x3F81000000000000;
+constexpr uint64_t float_subnormal_exponent_filler = 0x3F81000000000000;
 constexpr uint64_t double_subnormal_exponent_filler = 0x3C01000000000000;
 
 constexpr uint64_t upper_mantissa_mask = 0x0000FFFFFFFFFFFF;
@@ -58,22 +59,19 @@ constexpr __int128 min_representable_int128 = -max_representable_int128;
 
 #endif
 
-
 // mantissa_calc
 constexpr size_t upper_bit_size = quadruple_mantissa_size - sizeof(uint64_t) * 8 + 1;
 
-template<class T>
-concept Unsigned = requires {
-    std::is_unsigned_v<T>;
-};
+template <class T>
+concept Unsigned = requires { std::is_unsigned_v<T>; };
 
-template<class T>
+template <class T>
 concept FloatingPoint = requires {
     std::is_floating_point_v<T>;
     sizeof(T) == sizeof(uint32_t) || sizeof(T) == sizeof(uint64_t);
 };
 
-template<class T, size_t N>
+template <class T, size_t N>
 concept ValidBitIndex = sizeof(T) * 8 > N;
 
 template <typename T>
@@ -86,8 +84,9 @@ constexpr size_t bit_size_of(T&& value) noexcept {
     return sizeof(value) * 8;
 }
 
-template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
-constexpr T single_bit_mask() noexcept{
+template <Unsigned T, size_t N>
+requires ValidBitIndex<T, N>
+constexpr T single_bit_mask() noexcept {
     return T{1} << (sizeof(T) * 8 - N - 1);
 }
 
@@ -96,7 +95,8 @@ constexpr T value_sign_mask() noexcept {
     return single_bit_mask<T, 0>();
 }
 
-template <Unsigned T, size_t N> requires ValidBitIndex<T, N>
+template <Unsigned T, size_t N>
+requires ValidBitIndex<T, N>
 constexpr bool is_bit_set(T value) noexcept {
     return (value & single_bit_mask<T, N>()) != 0;
 }
@@ -119,7 +119,8 @@ constexpr int most_significant_bit_position(T value) noexcept {
 }
 
 constexpr uint16_t exponent_to_uint16(uint64_t exponent_value) noexcept {
-    return static_cast<uint16_t>((exponent_value & ~single_bit_mask<uint64_t, 0>()) >> ((sizeof(uint64_t) - sizeof(uint16_t)) * 8));
+    return static_cast<uint16_t>((exponent_value & ~single_bit_mask<uint64_t, 0>()) >>
+                                 ((sizeof(uint64_t) - sizeof(uint16_t)) * 8));
 }
 
 constexpr int exponent_difference(uint64_t lhs, uint64_t rhs) noexcept {
