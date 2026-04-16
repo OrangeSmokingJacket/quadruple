@@ -5,12 +5,12 @@
 
 #include "ub_consistency.hpp"
 
-template<typename T>
+template <typename T>
 bool is_negative(T val) {
     return std::signbit(val);
 }
 
-template<>
+template <>
 bool is_negative(quadruple val) {
     return val.signbit();
 }
@@ -104,7 +104,7 @@ TEMPLATE_TEST_CASE("test utils", "[utils]", float, double, quadruple) {
     }
 }
 
-template<typename...>
+template <typename...>
 struct custom_type_packer {};
 
 using dummy_type = void*;

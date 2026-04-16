@@ -213,7 +213,7 @@ TEMPLATE_TEST_CASE("from quadruple subnormals", "[conversion][floating]", float,
     }
 }
 
-template<typename T>
+template <typename T>
 constexpr bool check_representation([[maybe_unused]] T val) {
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
     if constexpr (sizeof(T) * 8 > quadruple_mantissa_size) {

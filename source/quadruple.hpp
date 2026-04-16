@@ -16,7 +16,7 @@ public:
     quadruple& operator=(quadruple&&) noexcept = default;
     ~quadruple() noexcept = default;
 
-    template<typename T>
+    template <typename T>
     requires std::is_integral_v<T>
     OPTIONAL_EXPLICIT()
     quadruple(T value) noexcept;
@@ -109,7 +109,7 @@ private:
     [[nodiscard]] inline mantissa_calc convert_mantissa() const;
 };
 
-template<typename T>
+template <typename T>
 requires std::is_integral_v<T>
 quadruple::quadruple(T value) noexcept
     : quadruple(value < 0 ? static_cast<uint64_t>(-value) : static_cast<uint64_t>(value)) {
