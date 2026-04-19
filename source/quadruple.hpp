@@ -72,8 +72,10 @@ public:
     quadruple operator-() const;
     quadruple operator+(const quadruple& rhs) const;
     quadruple operator-(const quadruple& rhs) const;
+    quadruple operator*(const quadruple& rhs) const;
     quadruple& operator+=(const quadruple& rhs);
     quadruple& operator-=(const quadruple& rhs);
+    quadruple& operator*=(const quadruple& rhs);
 
     bool operator==(const quadruple& rhs) const noexcept;
     bool operator!=(const quadruple& rhs) const noexcept;
@@ -102,6 +104,7 @@ private:
         void shift_right(uint32_t amount) noexcept;
         [[nodiscard]] mantissa_calc operator+(const mantissa_calc& rhs) const noexcept;
         [[nodiscard]] mantissa_calc operator-(const mantissa_calc& rhs) const noexcept;
+        [[nodiscard]] mantissa_calc operator*(const mantissa_calc& rhs) const noexcept;
 
         bool operator<(const mantissa_calc& rhs) const noexcept;
     };

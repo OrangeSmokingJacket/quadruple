@@ -2,6 +2,7 @@
 #include "ub_consistency.hpp"
 #include "utils.hpp"
 
+#include <array>
 #include <bit>
 #include <cassert>
 #include <cfenv>
@@ -703,15 +704,15 @@ quadruple quadruple::operator-() const {
 }
 
 quadruple quadruple::operator+(const quadruple& rhs) const {
-    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
         if (signbit()) {
             return negative_quiet_NaN();
         } else {
             return quiet_NaN();
         }
     }
-    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
-        std::feraiseexcept(FE_INVALID);
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
         if (signbit()) {
             return negative_quiet_NaN();
         } else {
@@ -785,15 +786,15 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
 }
 
 quadruple quadruple::operator-(const quadruple& rhs) const {
-    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
         if (signbit()) {
             return negative_quiet_NaN();
         } else {
             return quiet_NaN();
         }
     }
-    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
-        std::feraiseexcept(FE_INVALID);
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
         if (signbit()) {
             return negative_quiet_NaN();
         } else {
@@ -873,6 +874,83 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
     return res;
 }
 
+quadruple quadruple::operator*(const quadruple& rhs) const {
+    bool result_sign = signbit() != rhs.signbit();
+
+    if (is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
+        if (signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
+    } else if (rhs.is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
+        if (rhs.signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
+    } else if (is_quiet_NaN()) {
+        return *this;
+    } else if (rhs.is_quiet_NaN()) {
+        return rhs;
+    }
+
+    // handle infinity
+    if ((upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        if (rhs.is_zero()) {
+            return negative_quiet_NaN();
+        } else if (rhs.signbit()) {
+            return -*this;
+        } else {
+            return *this;
+        }
+    } else if ((rhs.upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        if (is_zero()) {
+            return negative_quiet_NaN();
+        } else if (signbit()) {
+            return -rhs;
+        } else {
+            return rhs;
+        }
+    }
+
+    if (is_zero() || rhs.is_zero()) {
+        return result_sign ? -quadruple{} : quadruple{};
+    }
+
+    auto lhs_exp = exponent_to_uint16(upper_);
+    auto rhs_exp = exponent_to_uint16(rhs.upper_);
+    int adjusted_res_exp = lhs_exp + rhs_exp - exponent_values::quadruple_exponent_zero;
+    if (adjusted_res_exp > static_cast<int>(exponent_values::quadruple_exponent_max)) {
+        return result_sign ? negative_infinity() : infinity();
+    }
+
+    auto res_exp = static_cast<uint16_t>(adjusted_res_exp);
+
+    auto lhs_mantissa = convert_mantissa();
+    auto rhs_mantissa = rhs.convert_mantissa();
+
+    auto res_mantissa = lhs_mantissa * rhs_mantissa;
+    auto msb = res_mantissa.most_significant_bit_position();
+    // 0 adjustment if msb is 64 - upper_bit_size
+    int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
+    if (exponent_adj >= 0) {
+        res_exp++;
+    }
+    res_mantissa.normalize(exponent_adj);
+    // remove implied bit
+    res_mantissa.upper &= upper_mantissa_mask;
+
+    uint64_t res_exp_shifted = static_cast<uint64_t>(res_exp) << (bit_size_of<uint64_t>() - bit_size_of<uint16_t>());
+    auto res = quadruple{res_exp_shifted | res_mantissa.upper, res_mantissa.lower};
+    if (result_sign) {
+        res.upper_ |= sign_bit_mask;
+    }
+    return res;
+}
+
 quadruple& quadruple::operator+=(const quadruple& rhs) {
     *this = *this + rhs;
     return *this;
@@ -880,6 +958,11 @@ quadruple& quadruple::operator+=(const quadruple& rhs) {
 
 quadruple& quadruple::operator-=(const quadruple& rhs) {
     *this = *this - rhs;
+    return *this;
+}
+
+quadruple& quadruple::operator*=(const quadruple& rhs) {
+    *this = *this * rhs;
     return *this;
 }
 
@@ -1019,6 +1102,62 @@ quadruple::mantissa_calc quadruple::mantissa_calc::operator-(const mantissa_calc
     if (result.lower > lower) {
         // there was overflow
         --result.upper;
+    }
+    return result;
+}
+
+quadruple::mantissa_calc quadruple::mantissa_calc::operator*(const mantissa_calc& rhs) const noexcept {
+    // with implicit bit added, we can have up to 113 bits for each mantissa
+    // which will become up to 226 bits for the result
+    // from which we need only upper half, but lower has to be calculated
+    // otherwise result will be incorrect
+    // we can split it into 32 bit chunks, multiplying which will give 64 bit ones
+    // with 32 bit chunks, result will be 256, for easier use
+
+    std::array<uint32_t, 8> chunks{};
+
+    for (size_t i = 0; i < sizeof(mantissa_calc) / sizeof(uint32_t); i++) {
+        for (size_t j = 0; j < sizeof(mantissa_calc) / sizeof(uint32_t); j++) {
+            uint32_t* result_pos = chunks.data() + i + j;
+            uint32_t lhs_chunk{}, rhs_chunk{};
+            std::memcpy(&lhs_chunk, reinterpret_cast<const uint32_t*>(this) + i, sizeof(uint32_t));
+            std::memcpy(&rhs_chunk, reinterpret_cast<const uint32_t*>(&rhs) + j, sizeof(uint32_t));
+
+            uint64_t res = static_cast<uint64_t>(lhs_chunk) * static_cast<uint64_t>(rhs_chunk);
+            // because of the uint64_t align, we have to cast it to uint32_t
+            uint32_t lower_part{}, upper_part{};
+            std::memcpy(&lower_part, &res, sizeof(uint32_t));
+            std::memcpy(&upper_part, reinterpret_cast<uint32_t*>(&res) + 1, sizeof(uint32_t));
+            *result_pos += lower_part;
+            if (*result_pos < lower_part) {
+                ++(*(result_pos + 1));
+            }
+            *(result_pos + 1) += upper_part;
+            if (*(result_pos + 1) < upper_part) {
+                //it is impossible to get overflow to chunk[8], so we are safe
+                ++(*(result_pos + 2));
+            }
+        }
+    }
+    // after that floating point is 32 bits away from the start, while it is supposed to be 16 (quadruple_exponent_size)
+    // chunks 0-2 will not affect the result, and 3rd has only one bit that we care about
+    // so shift only 4-7 chunks
+    // shifts can be combined into uint64_t
+
+    mantissa_calc result;
+    std::memcpy(&result.lower, chunks.data() + 4, sizeof(result.lower));
+    std::memcpy(&result.upper, chunks.data() + 6, sizeof(result.upper));
+    result.upper <<= quadruple_exponent_size;
+    // lower_pair have to move top 15 bits to upper_pair
+    uint64_t carry = result.lower >> (bit_size_of<uint64_t>() - quadruple_exponent_size);
+    result.lower <<= quadruple_exponent_size;
+    result.upper |= carry;
+
+    if (is_bit_set<uint32_t, quadruple_exponent_size>(chunks[3])) {
+        // round up
+        if (++result.lower == 0) {
+            ++result.upper;
+        }
     }
     return result;
 }
