@@ -754,3 +754,70 @@ TEST_CASE("quadruple subnormals", "[arithmetics]") {
         REQUIRE(res == sub_normal1);
     }
 }
+
+TEST_CASE("quadruple powers of 2", "[arithmetics]") {
+    // +0
+    REQUIRE(quadruple::power_of_2(quadruple_min_representable_pow2 - 1).is_zero());
+    REQUIRE_FALSE(quadruple::power_of_2(quadruple_min_representable_pow2 - 1).signbit());
+
+    SECTION("positive") {
+        SECTION("addition") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = quadruple::power_of_2(exponent);
+                auto summed = first_power + first_power;
+                auto next_power = quadruple::power_of_2(exponent + 1);
+                REQUIRE(summed == next_power);
+            }
+        }
+        SECTION("subtraction") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = quadruple::power_of_2(exponent);
+                auto next_power = quadruple::power_of_2(exponent + 1);
+                auto subtracted = next_power - first_power;
+                REQUIRE(subtracted == first_power);
+            }
+        }
+        SECTION("multiplication") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = quadruple::power_of_2(exponent);
+                auto multiplied = first_power * quadruple{2};
+                auto next_power = quadruple::power_of_2(exponent + 1);
+                REQUIRE(multiplied == next_power);
+            }
+        }
+    }
+    SECTION("negative") {
+        SECTION("addition") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = -quadruple::power_of_2(exponent);
+                auto summed = first_power + first_power;
+                auto next_power = -quadruple::power_of_2(exponent + 1);
+                REQUIRE(summed == next_power);
+            }
+        }
+        SECTION("subtraction") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = -quadruple::power_of_2(exponent);
+                auto next_power = -quadruple::power_of_2(exponent + 1);
+                auto subtracted = next_power - first_power;
+                REQUIRE(subtracted == first_power);
+            }
+        }
+        SECTION("multiplication") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = -quadruple::power_of_2(exponent);
+                auto multiplied = first_power * quadruple{2};
+                auto next_power = -quadruple::power_of_2(exponent + 1);
+                REQUIRE(multiplied == next_power);
+            }
+        }
+    }
+
+    REQUIRE(quadruple::power_of_2(quadruple_max_representable_pow2) * quadruple{2} == quadruple::infinity());
+}

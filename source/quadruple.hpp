@@ -65,6 +65,8 @@ public:
     static constexpr quadruple max() noexcept;
     static constexpr quadruple min() noexcept;
 
+    static constexpr quadruple power_of_2(int32_t power) noexcept;
+
     // does not raise FE_INVALID for signaling NaN
     constexpr quadruple& flip_sign() noexcept;
 
@@ -139,6 +141,27 @@ constexpr quadruple quadruple::negative_infinity() noexcept { return {0xFFFF0000
 
 constexpr quadruple quadruple::max() noexcept { return {0x7FFEFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
 constexpr quadruple quadruple::min() noexcept { return {0x0001000000000000, 0}; }
+
+constexpr quadruple quadruple::power_of_2(int32_t power) noexcept {
+    if (power > quadruple_max_representable_pow2) {
+        return infinity();
+    } else if (power < quadruple_min_representable_pow2) {
+        return quadruple{};
+    } else if (power >= quadruple_min_normal_representable_pow2) {
+        uint64_t upper = static_cast<uint64_t>(power + static_cast<int32_t>(exponent_values::quadruple_exponent_bias));
+        upper <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
+        return quadruple{upper, 0};
+    } else {
+        size_t bit_pos = static_cast<size_t>(quadruple_min_normal_representable_pow2 - power);
+        if (bit_pos < upper_bit_size) {
+            uint64_t upper = uint64_t{1} << (upper_bit_size - bit_pos - 1);
+            return quadruple{upper, 0};
+        } else {
+            uint64_t lower = uint64_t{1} << (bit_size_of<uint64_t>() - (bit_pos - upper_bit_size) - 1);
+            return quadruple{0, lower};
+        }
+    }
+}
 
 constexpr quadruple& quadruple::flip_sign() noexcept {
     upper_ ^= sign_bit_mask;

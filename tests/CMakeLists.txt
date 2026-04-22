@@ -3,6 +3,7 @@ project(tests)
 set(test_files
         test_arithmetics.cpp
         test_comparison.cpp
+        test_constexpr.cpp
         test_conversion.cpp
         test_utils.cpp
 )

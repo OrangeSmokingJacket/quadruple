@@ -52,6 +52,12 @@ constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
 constexpr uint64_t quadruple_exponent_min = 0;
 constexpr uint64_t quadruple_exponent_bias = 0x3FFF000000000000;
 
+constexpr int32_t quadruple_min_normal_representable_pow2 =
+    1 - static_cast<int32_t>(exponent_values::quadruple_exponent_bias);
+constexpr int32_t quadruple_min_representable_pow2 =
+    quadruple_min_normal_representable_pow2 - static_cast<int32_t>(quadruple_mantissa_size);
+constexpr int32_t quadruple_max_representable_pow2 = static_cast<int32_t>(exponent_values::quadruple_exponent_bias);
+
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 
 constexpr unsigned __int128 max_representable_uint128 = (unsigned __int128){1} << quadruple_mantissa_size;
