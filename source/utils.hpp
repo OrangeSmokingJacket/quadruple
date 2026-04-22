@@ -45,6 +45,8 @@ constexpr uint64_t upper_mantissa_mask = 0x0000FFFFFFFFFFFF;
 constexpr uint64_t implied_bit_mask = 0x0001000000000000;
 constexpr uint64_t sign_bit_mask = 0x8000000000000000;
 constexpr uint64_t sign_bits_mask = 0xC000000000000000;
+constexpr uint64_t zero_mask = sign_bit_mask;
+constexpr uint64_t subnormal_mask = 0x7FFF000000000000;
 
 constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
 constexpr uint64_t quadruple_exponent_min = 0;

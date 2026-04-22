@@ -626,49 +626,6 @@ quadruple::operator double() const noexcept {
     }
 }
 
-bool quadruple::is_zero() const noexcept {
-    static constexpr uint64_t zero_mask = single_bit_mask<uint64_t, 0>();
-    return (upper_ | zero_mask) == zero_mask && lower_ == 0;
-}
-
-bool quadruple::is_NaN() const noexcept { return is_quiet_NaN() || is_signaling_NaN(); }
-
-bool quadruple::is_quiet_NaN() const noexcept {
-    return (upper_ == 0x7FFFFFFFFFFFFFFF || upper_ == 0xFFFFFFFFFFFFFFFF) && lower_ == 0xFFFFFFFFFFFFFFFF;
-}
-
-bool quadruple::is_signaling_NaN() const noexcept {
-    return (upper_ == 0x7FFFAAAAAAAAAAAA || upper_ == 0xFFFFAAAAAAAAAAAA) && lower_ == 0xAAAAAAAAAAAAAAAA;
-}
-
-bool quadruple::is_subnormal() const noexcept {
-    static constexpr uint64_t subnormal_mask = 0x7FFF000000000000;
-    return (upper_ & subnormal_mask) == 0 && ((upper_ & upper_mantissa_mask) != 0 || lower_ != 0);
-}
-
-bool quadruple::signbit() const noexcept { return (upper_ & sign_bit_mask) != 0; }
-
-quadruple quadruple::quiet_NaN() noexcept { return {0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
-
-quadruple quadruple::negative_quiet_NaN() noexcept { return {0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
-
-quadruple quadruple::signaling_NaN() noexcept { return {0x7FFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA}; }
-
-quadruple quadruple::negative_signaling_NaN() noexcept { return {0xFFFFAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA}; }
-
-quadruple quadruple::infinity() noexcept { return {0x7FFF000000000000, 0}; }
-
-quadruple quadruple::negative_infinity() noexcept { return {0xFFFF000000000000, 0}; }
-
-quadruple quadruple::max() noexcept { return {0x7FFEFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}; }
-
-quadruple quadruple::min() noexcept { return {0x0001000000000000, 0}; }
-
-quadruple& quadruple::flip_sign() noexcept {
-    upper_ ^= sign_bit_mask;
-    return *this;
-}
-
 quadruple quadruple::operator+() const {
     if constexpr (UB_handle::unary_signaling::PRESERVED) {
         return *this;
@@ -1018,10 +975,6 @@ std::partial_ordering quadruple::operator<=>(const quadruple& rhs) const noexcep
         return std::partial_ordering::unordered;
     }
 }
-
-quadruple::quadruple(uint64_t upper, uint64_t lower) noexcept
-    : lower_(lower)
-    , upper_(upper) {}
 
 bool quadruple::mantissa_calc::is_zero() const noexcept { return upper == 0 && lower == 0; }
 
