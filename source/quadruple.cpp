@@ -952,59 +952,6 @@ quadruple& quadruple::operator*=(const quadruple& rhs) {
     return *this;
 }
 
-bool quadruple::operator==(const quadruple& rhs) const noexcept {
-    if (is_NaN() || rhs.is_NaN()) {
-        return false;
-    }
-    if (is_zero() && rhs.is_zero()) {
-        return true;
-    }
-
-    return upper_ == rhs.upper_ && lower_ == rhs.lower_;
-}
-
-bool quadruple::operator!=(const quadruple& rhs) const noexcept { return !operator==(rhs); }
-
-bool quadruple::operator<(const quadruple& rhs) const noexcept {
-    if (is_NaN() || rhs.is_NaN()) {
-        return false;
-    }
-    auto lhs_sign = signbit();
-    auto rhs_sign = rhs.signbit();
-    if (lhs_sign != rhs_sign) {
-        return lhs_sign > rhs_sign;
-    }
-
-    auto lhs_exp = exponent_to_uint16(upper_);
-    auto rhs_exp = exponent_to_uint16(rhs.upper_);
-
-    if (lhs_exp < rhs_exp) {
-        return !lhs_sign;
-    } else if (lhs_exp > rhs_exp) {
-        return lhs_sign;
-    } else {
-        return (convert_mantissa() < rhs.convert_mantissa()) != lhs_sign;
-    }
-}
-
-bool quadruple::operator<=(const quadruple& rhs) const noexcept { return operator==(rhs) || operator<(rhs); }
-
-bool quadruple::operator>(const quadruple& rhs) const noexcept { return rhs.operator<(*this); }
-
-bool quadruple::operator>=(const quadruple& rhs) const noexcept { return !operator<(rhs); }
-
-std::partial_ordering quadruple::operator<=>(const quadruple& rhs) const noexcept {
-    if (*this == rhs) {
-        return std::partial_ordering::equivalent;
-    } else if (*this < rhs) {
-        return std::partial_ordering::less;
-    } else if (*this > rhs) {
-        return std::partial_ordering::greater;
-    } else {
-        return std::partial_ordering::unordered;
-    }
-}
-
 bool quadruple::mantissa_calc::is_zero() const noexcept { return upper == 0 && lower == 0; }
 
 // returns 128, if there is no bits set
@@ -1140,19 +1087,6 @@ quadruple::mantissa_calc quadruple::mantissa_calc::operator*(const mantissa_calc
         if (++result.lower == 0) {
             ++result.upper;
         }
-    }
-    return result;
-}
-
-bool quadruple::mantissa_calc::operator<(const mantissa_calc& rhs) const noexcept {
-    return upper < rhs.upper || (upper == rhs.upper && lower < rhs.lower);
-}
-
-quadruple::mantissa_calc quadruple::convert_mantissa() const {
-    static constexpr uint64_t implied_mask = single_bit_mask<uint64_t, quadruple_exponent_size>();
-    mantissa_calc result{lower_, upper_ & upper_mantissa_mask};
-    if (!is_subnormal()) {
-        result.upper |= implied_mask;
     }
     return result;
 }

@@ -79,13 +79,13 @@ public:
     quadruple& operator-=(const quadruple& rhs);
     quadruple& operator*=(const quadruple& rhs);
 
-    bool operator==(const quadruple& rhs) const noexcept;
-    bool operator!=(const quadruple& rhs) const noexcept;
-    bool operator<(const quadruple& rhs) const noexcept;
-    bool operator<=(const quadruple& rhs) const noexcept;
-    bool operator>(const quadruple& rhs) const noexcept;
-    bool operator>=(const quadruple& rhs) const noexcept;
-    std::partial_ordering operator<=>(const quadruple& rhs) const noexcept;
+    constexpr bool operator==(const quadruple& rhs) const noexcept;
+    constexpr bool operator!=(const quadruple& rhs) const noexcept;
+    constexpr bool operator<(const quadruple& rhs) const noexcept;
+    constexpr bool operator<=(const quadruple& rhs) const noexcept;
+    constexpr bool operator>(const quadruple& rhs) const noexcept;
+    constexpr bool operator>=(const quadruple& rhs) const noexcept;
+    constexpr std::partial_ordering operator<=>(const quadruple& rhs) const noexcept;
 
 private:
     // data
@@ -108,11 +108,20 @@ private:
         [[nodiscard]] mantissa_calc operator-(const mantissa_calc& rhs) const noexcept;
         [[nodiscard]] mantissa_calc operator*(const mantissa_calc& rhs) const noexcept;
 
-        bool operator<(const mantissa_calc& rhs) const noexcept;
+        constexpr bool operator<(const mantissa_calc& rhs) const noexcept;
     };
 
-    [[nodiscard]] inline mantissa_calc convert_mantissa() const;
+    [[nodiscard]] constexpr mantissa_calc convert_mantissa() const;
 };
+
+template <typename T>
+requires std::is_integral_v<T>
+quadruple::quadruple(T value) noexcept
+    : quadruple(value < 0 ? static_cast<uint64_t>(-value) : static_cast<uint64_t>(value)) {
+    if (value < 0) {
+        flip_sign();
+    }
+}
 
 constexpr quadruple::quadruple(uint64_t upper, uint64_t lower) noexcept
     : lower_(lower)
@@ -168,11 +177,67 @@ constexpr quadruple& quadruple::flip_sign() noexcept {
     return *this;
 }
 
-template <typename T>
-requires std::is_integral_v<T>
-quadruple::quadruple(T value) noexcept
-    : quadruple(value < 0 ? static_cast<uint64_t>(-value) : static_cast<uint64_t>(value)) {
-    if (value < 0) {
-        flip_sign();
+constexpr bool quadruple::operator==(const quadruple& rhs) const noexcept {
+    if (is_NaN() || rhs.is_NaN()) {
+        return false;
     }
+    if (is_zero() && rhs.is_zero()) {
+        return true;
+    }
+
+    return upper_ == rhs.upper_ && lower_ == rhs.lower_;
+}
+
+constexpr bool quadruple::operator!=(const quadruple& rhs) const noexcept { return !operator==(rhs); }
+
+constexpr bool quadruple::operator<(const quadruple& rhs) const noexcept {
+    if (is_NaN() || rhs.is_NaN()) {
+        return false;
+    }
+    auto lhs_sign = signbit();
+    auto rhs_sign = rhs.signbit();
+    if (lhs_sign != rhs_sign) {
+        return lhs_sign > rhs_sign;
+    }
+
+    auto lhs_exp = exponent_to_uint16(upper_);
+    auto rhs_exp = exponent_to_uint16(rhs.upper_);
+
+    if (lhs_exp < rhs_exp) {
+        return !lhs_sign;
+    } else if (lhs_exp > rhs_exp) {
+        return lhs_sign;
+    } else {
+        return (convert_mantissa() < rhs.convert_mantissa()) != lhs_sign;
+    }
+}
+
+constexpr bool quadruple::operator<=(const quadruple& rhs) const noexcept { return operator==(rhs) || operator<(rhs); }
+
+constexpr bool quadruple::operator>(const quadruple& rhs) const noexcept { return rhs.operator<(*this); }
+
+constexpr bool quadruple::operator>=(const quadruple& rhs) const noexcept { return !operator<(rhs); }
+
+constexpr std::partial_ordering quadruple::operator<=>(const quadruple& rhs) const noexcept {
+    if (*this == rhs) {
+        return std::partial_ordering::equivalent;
+    } else if (*this < rhs) {
+        return std::partial_ordering::less;
+    } else if (*this > rhs) {
+        return std::partial_ordering::greater;
+    } else {
+        return std::partial_ordering::unordered;
+    }
+}
+
+constexpr quadruple::mantissa_calc quadruple::convert_mantissa() const {
+    mantissa_calc result{lower_, upper_ & upper_mantissa_mask};
+    if (!is_subnormal()) {
+        result.upper |= implied_bit_mask;
+    }
+    return result;
+}
+
+constexpr bool quadruple::mantissa_calc::operator<(const mantissa_calc& rhs) const noexcept {
+    return upper < rhs.upper || (upper == rhs.upper && lower < rhs.lower);
 }
