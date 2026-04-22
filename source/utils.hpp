@@ -28,7 +28,7 @@ constexpr uint64_t double_mantissa_mask = (uint64_t{1} << double_mantissa_size) 
 namespace exponent_values {
     constexpr uint16_t quadruple_exponent_max = 0x7FFF;
     constexpr uint16_t quadruple_exponent_min = 0;
-    constexpr uint16_t quadruple_exponent_zero = 0x3FFF;
+    constexpr uint16_t quadruple_exponent_bias = 0x3FFF;
     constexpr uint16_t max_float_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (float_exponent_size - 1));
     constexpr uint16_t max_double_exponent = quadruple_exponent_max / 2 + (uint16_t{1} << (double_exponent_size - 1));
     constexpr uint16_t min_float_exponent = quadruple_exponent_max / 2 - (uint16_t{1} << (float_exponent_size - 1)) + 1;
@@ -48,7 +48,7 @@ constexpr uint64_t sign_bits_mask = 0xC000000000000000;
 
 constexpr uint64_t quadruple_exponent_max = 0x7FFF000000000000;
 constexpr uint64_t quadruple_exponent_min = 0;
-constexpr uint64_t quadruple_exponent_zero = 0x3FFF000000000000;
+constexpr uint64_t quadruple_exponent_bias = 0x3FFF000000000000;
 
 #if defined(EXTENSIONS) && defined(__SIZEOF_INT128__)
 

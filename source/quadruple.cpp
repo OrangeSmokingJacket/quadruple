@@ -25,7 +25,7 @@ quadruple::quadruple(uint64_t value) noexcept {
     }
 
     auto msb = most_significant_bit_position<uint64_t>(value);
-    uint64_t exponent_val = exponent_values::quadruple_exponent_zero +
+    uint64_t exponent_val = exponent_values::quadruple_exponent_bias +
                             static_cast<uint16_t>(sizeof(uint64_t) * 8 - static_cast<uint64_t>(msb) - 1);
     exponent_val <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
     assert((exponent_val & upper_mantissa_mask) == 0);
@@ -204,7 +204,7 @@ quadruple::quadruple(unsigned __int128 value) noexcept {
     mantissa_calc split_value = std::bit_cast<mantissa_calc>(value);
 
     auto msb = split_value.most_significant_bit_position();
-    uint64_t exponent_val = exponent_values::quadruple_exponent_zero +
+    uint64_t exponent_val = exponent_values::quadruple_exponent_bias +
                             static_cast<uint16_t>(sizeof(unsigned __int128) * 8 - static_cast<uint64_t>(msb) - 1);
     exponent_val <<= (sizeof(uint64_t) - sizeof(uint16_t)) * 8;
     assert((exponent_val & upper_mantissa_mask) == 0);
@@ -225,14 +225,14 @@ quadruple::operator __int128() const noexcept {
             return __int128{0};
         }
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size > sizeof(__int128) * 8) {
             return 0;
@@ -263,14 +263,14 @@ quadruple::operator unsigned __int128() const noexcept {
             }
         }
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size > sizeof(unsigned __int128) * 8) {
             if (signbit()) {
@@ -309,15 +309,15 @@ quadruple::operator int32_t() const noexcept {
         std::feraiseexcept(FE_INVALID);
         return UB_handle::to_integer_conversion::NEG_OVERFLOW<int32_t>;
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size >= sizeof(int32_t) * 8) {
             return UB_handle::to_integer_conversion::NEG_OVERFLOW<int32_t>;
@@ -340,15 +340,15 @@ quadruple::operator int64_t() const noexcept {
         std::feraiseexcept(FE_INVALID);
         return UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>;
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size >= sizeof(int64_t) * 8) {
             return UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>;
@@ -375,15 +375,15 @@ quadruple::operator uint32_t() const noexcept {
         std::feraiseexcept(FE_INVALID);
         return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint32_t>;
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size >= sizeof(uint64_t) * 8) {
             return UB_handle::to_integer_conversion::NaN<uint32_t>;
@@ -426,15 +426,15 @@ quadruple::operator uint64_t() const noexcept {
         }
 #endif
     }
-    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_zero) {
+    if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
-        if (result_bit_size < quadruple_exponent_zero) {
+        if (result_bit_size < quadruple_exponent_bias) {
             return 0;
         }
-        result_bit_size -= quadruple_exponent_zero;
+        result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
         if (result_bit_size + static_cast<uint64_t>(signbit()) > sizeof(uint64_t) * 8) {
             if (signbit()) {
@@ -922,7 +922,7 @@ quadruple quadruple::operator*(const quadruple& rhs) const {
 
     auto lhs_exp = exponent_to_uint16(upper_);
     auto rhs_exp = exponent_to_uint16(rhs.upper_);
-    int adjusted_res_exp = lhs_exp + rhs_exp - exponent_values::quadruple_exponent_zero;
+    int adjusted_res_exp = lhs_exp + rhs_exp - exponent_values::quadruple_exponent_bias;
     if (adjusted_res_exp > static_cast<int>(exponent_values::quadruple_exponent_max)) {
         return result_sign ? negative_infinity() : infinity();
     }
