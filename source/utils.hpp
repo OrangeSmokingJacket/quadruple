@@ -99,6 +99,11 @@ constexpr T single_bit_mask() noexcept {
 }
 
 template <Unsigned T>
+constexpr T single_bit_mask(size_t N) noexcept {
+    return T{1} << (sizeof(T) * 8 - N - 1);
+}
+
+template <Unsigned T>
 constexpr T value_sign_mask() noexcept {
     return single_bit_mask<T, 0>();
 }
@@ -124,6 +129,18 @@ constexpr int most_significant_bit_position(T value) noexcept {
         bit_mask >>= 1;
     }
     return sizeof(value) * 8;
+}
+
+template <Unsigned T>
+constexpr int least_significant_bit_position(T value) noexcept {
+    T bit_mask = single_bit_mask<T, 63>();
+    for (int i = static_cast<int>(sizeof(value) * 8) - 1; i >= 0; i--) {
+        if ((value & bit_mask) != 0) {
+            return i;
+        }
+        bit_mask <<= 1;
+    }
+    return -1;
 }
 
 constexpr uint16_t exponent_to_uint16(uint64_t exponent_value) noexcept {

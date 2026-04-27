@@ -88,4 +88,14 @@ namespace UB_handle {
 #endif
     } // namespace to_integer_conversion
 
+    namespace division {
+#if defined(__GNUC__)
+    #if defined(NDEBUG) && defined(__OPTIMIZE__)
+        constexpr bool fixed_sign_bit_0_by_0 = false;
+    #else
+        constexpr bool fixed_sign_bit_0_by_0 = true;
+    #endif
+#endif
+    } // namespace division
+
 } // namespace UB_handle

@@ -701,6 +701,259 @@ TEMPLATE_TEST_CASE("multiplication", "[arithmetics]", float, double) {
     }
 }
 
+TEMPLATE_TEST_CASE("division", "[arithmetics]", float, double) {
+    auto check_division = [](TestType val1, TestType val2) {
+        // both float and double divisions will round down
+        // and rounding supposed to be the same as from quadruple to double
+        quadruple converted_val1{val1};
+        quadruple converted_val2{val2};
+        TestType result = val1 / val2;
+        std::feclearexcept(FE_ALL_EXCEPT);
+        quadruple test_result = converted_val1 / converted_val2;
+        TestType converted_test_result{test_result};
+        if (is_sNaN(val1) || is_sNaN(val2)) {
+            REQUIRE(std::fetestexcept(FE_INVALID));
+            REQUIRE(std::isnan(converted_test_result));
+            REQUIRE_FALSE(is_sNaN(converted_test_result));
+        } else if (std::isnan(result)) {
+            REQUIRE(std::isnan(converted_test_result));
+        } else {
+            // compare bits
+            REQUIRE(std::memcmp(&result, &converted_test_result, sizeof(TestType)) == 0);
+        }
+    };
+
+    SECTION("positive") {
+        SECTION("constants") {
+            std::vector<TestType> test_constants;
+
+            test_constants.emplace_back(TestType{0});
+            test_constants.emplace_back(TestType{4});
+            test_constants.emplace_back(std::numbers::pi_v<TestType>);
+            test_constants.emplace_back(std::numbers::e_v<TestType>);
+            test_constants.emplace_back(std::numbers::phi_v<TestType>);
+            test_constants.emplace_back(std::numbers::sqrt2_v<TestType>);
+            test_constants.emplace_back(std::numbers::sqrt3_v<TestType>);
+            test_constants.emplace_back(std::numbers::inv_sqrtpi_v<TestType>);
+            test_constants.emplace_back(std::numeric_limits<TestType>::infinity());
+            test_constants.emplace_back(std::numeric_limits<TestType>::quiet_NaN());
+            test_constants.emplace_back(std::numeric_limits<TestType>::signaling_NaN());
+
+            for (size_t i = 0; i < test_constants.size(); i++) {
+                for (size_t j = 0; j < test_constants.size(); j++) {
+                    check_division(test_constants.at(i), test_constants.at(j));
+                }
+            }
+        }
+        SECTION("random numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(generated.at(i), generated.at(j));
+                }
+            }
+        }
+        SECTION("random subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(generated.at(i), generated.at(j));
+                }
+            }
+        }
+        SECTION("random normal / subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated_n = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            auto generated_s = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated_n);
+
+            for (size_t i = 0; i < generated_n.size(); i++) {
+                for (size_t j = 0; j < generated_s.size(); j++) {
+                    check_division(generated_n.at(i), generated_s.at(j));
+                }
+            }
+
+            for (size_t i = 0; i < generated_s.size(); i++) {
+                for (size_t j = 0; j < generated_n.size(); j++) {
+                    check_division(generated_s.at(i), generated_n.at(j));
+                }
+            }
+        }
+    }
+
+    SECTION("negative") {
+        SECTION("constants") {
+            std::vector<TestType> test_constants;
+
+            test_constants.emplace_back(-TestType{0});
+            test_constants.emplace_back(-TestType{4});
+            test_constants.emplace_back(-std::numbers::pi_v<TestType>);
+            test_constants.emplace_back(-std::numbers::e_v<TestType>);
+            test_constants.emplace_back(-std::numbers::phi_v<TestType>);
+            test_constants.emplace_back(-std::numbers::sqrt2_v<TestType>);
+            test_constants.emplace_back(-std::numbers::sqrt3_v<TestType>);
+            test_constants.emplace_back(-std::numbers::inv_sqrtpi_v<TestType>);
+            test_constants.emplace_back(-std::numeric_limits<TestType>::infinity());
+            test_constants.emplace_back(-std::numeric_limits<TestType>::quiet_NaN());
+            test_constants.emplace_back(-std::numeric_limits<TestType>::signaling_NaN());
+
+            for (size_t i = 0; i < test_constants.size(); i++) {
+                for (size_t j = 0; j < test_constants.size(); j++) {
+                    check_division(test_constants.at(i), test_constants.at(j));
+                }
+            }
+        }
+        SECTION("random numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(-generated.at(i), -generated.at(j));
+                }
+            }
+        }
+        SECTION("random subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(-generated.at(i), -generated.at(j));
+                }
+            }
+        }
+        SECTION("random normal*subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated_n = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            auto generated_s = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated_n);
+
+            for (size_t i = 0; i < generated_n.size(); i++) {
+                for (size_t j = 0; j < generated_s.size(); j++) {
+                    check_division(-generated_n.at(i), -generated_s.at(j));
+                }
+            }
+
+            for (size_t i = 0; i < generated_s.size(); i++) {
+                for (size_t j = 0; j < generated_n.size(); j++) {
+                    check_division(-generated_s.at(i), -generated_n.at(j));
+                }
+            }
+        }
+    }
+
+    SECTION("opposites") {
+        SECTION("constants") {
+            std::vector<TestType> test_constants;
+
+            test_constants.emplace_back(TestType{0});
+            test_constants.emplace_back(TestType{4});
+            test_constants.emplace_back(std::numbers::pi_v<TestType>);
+            test_constants.emplace_back(std::numbers::e_v<TestType>);
+            test_constants.emplace_back(std::numbers::phi_v<TestType>);
+            test_constants.emplace_back(std::numbers::sqrt2_v<TestType>);
+            test_constants.emplace_back(std::numbers::sqrt3_v<TestType>);
+            test_constants.emplace_back(std::numbers::inv_sqrtpi_v<TestType>);
+            test_constants.emplace_back(std::numeric_limits<TestType>::infinity());
+            test_constants.emplace_back(std::numeric_limits<TestType>::quiet_NaN());
+            test_constants.emplace_back(std::numeric_limits<TestType>::signaling_NaN());
+
+            for (size_t i = 0; i < test_constants.size(); i++) {
+                for (size_t j = 0; j < test_constants.size(); j++) {
+                    check_division(test_constants.at(i), -test_constants.at(j));
+                }
+            }
+            for (size_t i = 0; i < test_constants.size(); i++) {
+                for (size_t j = 0; j < test_constants.size(); j++) {
+                    check_division(-test_constants.at(i), test_constants.at(j));
+                }
+            }
+        }
+        SECTION("random numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(generated.at(i), -generated.at(j));
+                }
+            }
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(-generated.at(i), generated.at(j));
+                }
+            }
+        }
+        SECTION("random subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated);
+
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(generated.at(i), -generated.at(j));
+                }
+            }
+            for (size_t i = 0; i < generated.size(); i++) {
+                for (size_t j = 0; j < generated.size(); j++) {
+                    check_division(-generated.at(i), generated.at(j));
+                }
+            }
+        }
+        SECTION("random normal*subnormal numbers") {
+            // sqrt for test size, otherwise it will take way too long to run
+            auto generated_n = generate_normal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            auto generated_s = generate_subnormal_numbers<TestType>(static_cast<size_t>(sqrt(test_size)));
+            remove_NaNs(generated_n);
+
+            for (size_t i = 0; i < generated_n.size(); i++) {
+                for (size_t j = 0; j < generated_s.size(); j++) {
+                    check_division(generated_n.at(i), -generated_s.at(j));
+                }
+            }
+            for (size_t i = 0; i < generated_n.size(); i++) {
+                for (size_t j = 0; j < generated_s.size(); j++) {
+                    check_division(-generated_n.at(i), generated_s.at(j));
+                }
+            }
+
+            for (size_t i = 0; i < generated_s.size(); i++) {
+                for (size_t j = 0; j < generated_n.size(); j++) {
+                    check_division(generated_s.at(i), -generated_n.at(j));
+                }
+            }
+            for (size_t i = 0; i < generated_s.size(); i++) {
+                for (size_t j = 0; j < generated_n.size(); j++) {
+                    check_division(-generated_s.at(i), generated_n.at(j));
+                }
+            }
+        }
+    }
+
+    SECTION("signed zero") {
+        SECTION("+/+") { REQUIRE(std::signbit(TestType{} / TestType{}) == (quadruple{} / quadruple{}).signbit()); }
+        SECTION("+/-") {
+            REQUIRE(std::signbit(TestType{} / (-TestType{})) == (quadruple{} / (-quadruple{})).signbit());
+        }
+        SECTION("-/+") {
+            REQUIRE(std::signbit((-TestType{}) / TestType{}) == ((-quadruple{}) / quadruple{}).signbit());
+        }
+        SECTION("-/-") {
+            REQUIRE(std::signbit((-TestType{}) / (-TestType{})) == ((-quadruple{}) / (-quadruple{})).signbit());
+        }
+    }
+}
+
 TEST_CASE("quadruple subnormals", "[arithmetics]") {
     SECTION("subnormal to normal") {
         quadruple sub_normal1{};
@@ -788,6 +1041,15 @@ TEST_CASE("quadruple powers of 2", "[arithmetics]") {
                 REQUIRE(multiplied == next_power);
             }
         }
+        SECTION("division") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = quadruple::power_of_2(exponent);
+                auto next_power = quadruple::power_of_2(exponent + 1);
+                auto divided = next_power / quadruple{2};
+                REQUIRE(divided == first_power);
+            }
+        }
     }
     SECTION("negative") {
         SECTION("addition") {
@@ -815,6 +1077,15 @@ TEST_CASE("quadruple powers of 2", "[arithmetics]") {
                 auto multiplied = first_power * quadruple{2};
                 auto next_power = -quadruple::power_of_2(exponent + 1);
                 REQUIRE(multiplied == next_power);
+            }
+        }
+        SECTION("division") {
+            for (int32_t exponent = quadruple_min_representable_pow2; exponent < quadruple_max_representable_pow2;
+                 exponent++) {
+                auto first_power = -quadruple::power_of_2(exponent);
+                auto next_power = -quadruple::power_of_2(exponent + 1);
+                auto divided = next_power / quadruple{2};
+                REQUIRE(divided == first_power);
             }
         }
     }

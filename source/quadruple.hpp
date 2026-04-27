@@ -75,9 +75,11 @@ public:
     quadruple operator+(const quadruple& rhs) const;
     quadruple operator-(const quadruple& rhs) const;
     quadruple operator*(const quadruple& rhs) const;
+    quadruple operator/(const quadruple& rhs) const;
     quadruple& operator+=(const quadruple& rhs);
     quadruple& operator-=(const quadruple& rhs);
     quadruple& operator*=(const quadruple& rhs);
+    quadruple& operator/=(const quadruple& rhs);
 
     constexpr bool operator==(const quadruple& rhs) const noexcept;
     constexpr bool operator!=(const quadruple& rhs) const noexcept;
@@ -101,14 +103,18 @@ private:
 
         bool is_zero() const noexcept;
         [[nodiscard]] int most_significant_bit_position() const noexcept;
+        [[nodiscard]] int least_significant_bit_position() const noexcept;
         void normalize(int adjustment) noexcept;
         void shift_left(uint32_t amount) noexcept;
         void shift_right(uint32_t amount) noexcept;
         [[nodiscard]] mantissa_calc operator+(const mantissa_calc& rhs) const noexcept;
         [[nodiscard]] mantissa_calc operator-(const mantissa_calc& rhs) const noexcept;
         [[nodiscard]] mantissa_calc operator*(const mantissa_calc& rhs) const noexcept;
+        [[nodiscard]] mantissa_calc operator/(const mantissa_calc& rhs) const noexcept;
 
+        constexpr bool operator==(const mantissa_calc& rhs) const noexcept;
         constexpr bool operator<(const mantissa_calc& rhs) const noexcept;
+        constexpr bool operator<=(const mantissa_calc& rhs) const noexcept;
     };
 
     [[nodiscard]] constexpr mantissa_calc convert_mantissa() const;
@@ -238,6 +244,14 @@ constexpr quadruple::mantissa_calc quadruple::convert_mantissa() const {
     return result;
 }
 
+constexpr bool quadruple::mantissa_calc::operator==(const mantissa_calc& rhs) const noexcept {
+    return upper == rhs.upper && lower == rhs.lower;
+}
+
 constexpr bool quadruple::mantissa_calc::operator<(const mantissa_calc& rhs) const noexcept {
     return upper < rhs.upper || (upper == rhs.upper && lower < rhs.lower);
+}
+
+constexpr bool quadruple::mantissa_calc::operator<=(const mantissa_calc& rhs) const noexcept {
+    return *this < rhs || *this == rhs;
 }

@@ -937,6 +937,93 @@ quadruple quadruple::operator*(const quadruple& rhs) const {
     return res;
 }
 
+quadruple quadruple::operator/(const quadruple& rhs) const {
+    bool result_sign = signbit() != rhs.signbit();
+
+    if (is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
+        if (signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
+    } else if (rhs.is_signaling_NaN()) {
+        std::feraiseexcept(FE_INVALID);
+        if (rhs.signbit()) {
+            return negative_quiet_NaN();
+        } else {
+            return quiet_NaN();
+        }
+    } else if (is_quiet_NaN()) {
+        return *this;
+    } else if (rhs.is_quiet_NaN()) {
+        return rhs;
+    }
+
+    // handle infinity
+    if ((rhs.upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        if ((upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
+            return negative_quiet_NaN();
+        } else {
+            return result_sign ? -quadruple{} : quadruple{};
+        }
+    }
+
+    if (is_zero() && rhs.is_zero()) {
+        if constexpr (UB_handle::division::fixed_sign_bit_0_by_0) {
+            return negative_quiet_NaN();
+        } else {
+            return result_sign ? negative_quiet_NaN() : quiet_NaN();
+        }
+    }
+    if (is_zero() || (rhs.upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
+        return result_sign ? -quadruple{} : quadruple{};
+    }
+    if ((upper_ & quadruple_exponent_max) == quadruple_exponent_max || rhs.is_zero()) {
+        return result_sign ? negative_infinity() : infinity();
+    }
+
+    auto lhs_exp = exponent_to_uint16(upper_);
+    auto rhs_exp = exponent_to_uint16(rhs.upper_);
+    int adjusted_res_exp = lhs_exp - rhs_exp;
+    if (adjusted_res_exp < quadruple_min_representable_pow2) {
+        return result_sign ? -quadruple{} : quadruple{};
+    }
+
+    auto lhs_mantissa = convert_mantissa();
+    auto rhs_mantissa = rhs.convert_mantissa();
+    // if we have subnormal numbers, we have to normalize mantissa and store by how much we moved
+    auto shift_lhs = static_cast<int>(quadruple_exponent_size) - lhs_mantissa.most_significant_bit_position();
+    auto shift_rhs = static_cast<int>(quadruple_exponent_size) - rhs_mantissa.most_significant_bit_position();
+    lhs_mantissa.normalize(shift_lhs);
+    rhs_mantissa.normalize(shift_rhs);
+
+    auto res_mantissa = lhs_mantissa / rhs_mantissa;
+    int exponent_adj = static_cast<int>(quadruple_exponent_size) - res_mantissa.most_significant_bit_position();
+    res_mantissa.normalize(exponent_adj);
+    adjusted_res_exp += exponent_adj;
+    int subnormal_shift = shift_rhs - shift_lhs;
+    if (subnormal_shift > 0) {
+        subnormal_shift--;
+    }
+    subnormal_shift = std::max(quadruple_min_normal_representable_pow2 - adjusted_res_exp, 0) + subnormal_shift;
+    uint64_t res_exp_shifted = 0;
+    if (subnormal_shift > 0) {
+        res_mantissa.normalize(subnormal_shift);
+    } else {
+        // remove implied bit
+        res_mantissa.upper &= upper_mantissa_mask;
+        res_exp_shifted = static_cast<uint64_t>(adjusted_res_exp + exponent_values::quadruple_exponent_bias)
+                          << (bit_size_of<uint64_t>() - bit_size_of<uint16_t>());
+    }
+
+    auto res = quadruple{res_exp_shifted | res_mantissa.upper, res_mantissa.lower};
+    if (result_sign) {
+        res.upper_ |= sign_bit_mask;
+    }
+    return res;
+}
+
 quadruple& quadruple::operator+=(const quadruple& rhs) {
     *this = *this + rhs;
     return *this;
@@ -952,6 +1039,11 @@ quadruple& quadruple::operator*=(const quadruple& rhs) {
     return *this;
 }
 
+quadruple& quadruple::operator/=(const quadruple& rhs) {
+    *this = *this / rhs;
+    return *this;
+}
+
 bool quadruple::mantissa_calc::is_zero() const noexcept { return upper == 0 && lower == 0; }
 
 // returns 128, if there is no bits set
@@ -959,7 +1051,18 @@ int quadruple::mantissa_calc::most_significant_bit_position() const noexcept {
     if (upper != 0) {
         return ::most_significant_bit_position<uint64_t>(upper);
     } else {
-        return ::most_significant_bit_position<uint64_t>(lower) + static_cast<int>(sizeof(lower) * 8);
+        return ::most_significant_bit_position<uint64_t>(lower) + static_cast<int>(sizeof(upper) * 8);
+    }
+}
+
+// returns -1, if there is no bits set
+int quadruple::mantissa_calc::least_significant_bit_position() const noexcept {
+    if (is_zero()) {
+        return -1;
+    } else if (lower != 0) {
+        return ::least_significant_bit_position<uint64_t>(lower);
+    } else {
+        return ::least_significant_bit_position<uint64_t>(upper) + static_cast<int>(sizeof(lower) * 8);
     }
 }
 
@@ -1089,4 +1192,30 @@ quadruple::mantissa_calc quadruple::mantissa_calc::operator*(const mantissa_calc
         }
     }
     return result;
+}
+
+quadruple::mantissa_calc quadruple::mantissa_calc::operator/(const mantissa_calc& rhs) const noexcept {
+    // assumes that both are normalized
+    assert(most_significant_bit_position() == static_cast<int>(quadruple_exponent_size));
+    assert(rhs.most_significant_bit_position() == static_cast<int>(quadruple_exponent_size));
+
+    mantissa_calc res{};
+    auto dividend = *this;
+    auto divisor = rhs;
+
+    size_t current_bit_pos = quadruple_exponent_size;
+    while (current_bit_pos < bit_size_of<mantissa_calc>() && !dividend.is_zero()) {
+        bool bit = divisor <= dividend;
+        if (bit) {
+            if (current_bit_pos < 64) {
+                res.upper |= single_bit_mask<uint64_t>(current_bit_pos);
+            } else {
+                res.lower |= single_bit_mask<uint64_t>(current_bit_pos - 64);
+            }
+            dividend = dividend - divisor;
+        }
+        current_bit_pos++;
+        dividend.shift_left(1);
+    }
+    return res;
 }
