@@ -692,14 +692,19 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
         return rhs;
     }
 
+    auto lhs_exp = exponent_to_uint16(upper_);
+    auto rhs_exp = exponent_to_uint16(rhs.upper_);
+    auto exp_diff = lhs_exp - rhs_exp;
     auto lhs_mantissa = convert_mantissa();
     auto rhs_mantissa = rhs.convert_mantissa();
-    auto exp_diff = exponent_difference(upper_, rhs.upper_);
 
+    int res_exp;
     if (exp_diff < 0) {
-        lhs_mantissa.shift_right(static_cast<uint32_t>(-exp_diff));
-    } else if (exp_diff > 0) {
-        rhs_mantissa.shift_right(static_cast<uint32_t>(exp_diff));
+        res_exp = rhs_exp;
+        lhs_mantissa.normalize(-exp_diff);
+    } else {
+        res_exp = lhs_exp;
+        rhs_mantissa.normalize(exp_diff);
     }
 
     auto res_mantissa = lhs_mantissa + rhs_mantissa;
@@ -713,12 +718,12 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
     auto msb = res_mantissa.most_significant_bit_position();
     // 0 adjustment if msb is 64 - upper_bit_size
     int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
-    auto singed_adjusted_exponent = exponent_to_uint16(upper_) + static_cast<int16_t>(exponent_adj);
-    if (singed_adjusted_exponent < 0) {
-        exponent_adj -= singed_adjusted_exponent;
-        singed_adjusted_exponent = 0;
+    res_exp += exponent_adj;
+    if (res_exp < 0) {
+        exponent_adj -= res_exp;
+        res_exp = 0;
     }
-    auto adjusted_exponent = static_cast<uint64_t>(singed_adjusted_exponent);
+    auto adjusted_exponent = static_cast<uint64_t>(res_exp);
     if (adjusted_exponent == std::numeric_limits<uint64_t>::max()) {
         auto res = quadruple{res_mantissa.upper, res_mantissa.lower};
         if (this_sign) {
@@ -776,12 +781,14 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
             return *this;
         }
     } else if ((rhs.upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
-        return rhs;
+        return -rhs;
     }
 
+    auto lhs_exp = exponent_to_uint16(upper_);
+    auto rhs_exp = exponent_to_uint16(rhs.upper_);
     auto lhs_mantissa = convert_mantissa();
     auto rhs_mantissa = rhs.convert_mantissa();
-    auto exp_diff = exponent_difference(upper_, rhs.upper_);
+    auto exp_diff = lhs_exp - rhs_exp;
 
     if (exp_diff < 0) {
         lhs_mantissa.shift_right(static_cast<uint32_t>(-exp_diff));
@@ -806,14 +813,14 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
     int exponent_adj = static_cast<int>(quadruple_exponent_size) - msb;
     uint64_t adjusted_exponent;
     if (flipped_sign) {
-        auto singed_adjusted_exponent = exponent_to_uint16(rhs.upper_) + static_cast<int16_t>(exponent_adj);
+        auto singed_adjusted_exponent = rhs_exp + static_cast<int16_t>(exponent_adj);
         if (singed_adjusted_exponent < 0) {
             exponent_adj -= singed_adjusted_exponent;
             singed_adjusted_exponent = 0;
         }
         adjusted_exponent = static_cast<uint64_t>(singed_adjusted_exponent);
     } else {
-        auto singed_adjusted_exponent = exponent_to_uint16(upper_) + static_cast<int16_t>(exponent_adj);
+        auto singed_adjusted_exponent = lhs_exp + static_cast<int16_t>(exponent_adj);
         if (singed_adjusted_exponent < 0) {
             exponent_adj -= singed_adjusted_exponent;
             singed_adjusted_exponent = 0;

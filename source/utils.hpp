@@ -148,10 +148,6 @@ constexpr uint16_t exponent_to_uint16(uint64_t exponent_value) noexcept {
                                  ((sizeof(uint64_t) - sizeof(uint16_t)) * 8));
 }
 
-constexpr int exponent_difference(uint64_t lhs, uint64_t rhs) noexcept {
-    return exponent_to_uint16(lhs) - exponent_to_uint16(rhs);
-}
-
 template <FloatingPoint T>
 constexpr bool is_sNaN(T value) noexcept {
     constexpr T sNaN = std::numeric_limits<T>::signaling_NaN();

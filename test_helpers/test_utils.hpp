@@ -67,6 +67,24 @@ void remove_NaNs(std::vector<T>& vector) {
 template <>
 void remove_NaNs(std::vector<quadruple>& vector);
 
+template <typename Iterator1, typename Iterator2, typename Function>
+void for_each_premutation(Iterator1 begin1, Iterator1 end1, Iterator2 begin2, Iterator2 end2, Function&& func) {
+    for (; begin1 != end1; ++begin1) {
+        for (; begin2 != end2; ++begin2) {
+            func(*begin1, *begin2);
+        }
+    }
+}
+
+template <typename Container1, typename Container2, typename Function>
+void for_each_premutation(const Container1& container1, const Container2& container2, Function&& func) {
+    for_each_premutation(container1.begin(),
+                         container1.end(),
+                         container2.begin(),
+                         container2.end(),
+                         std::forward<Function>(func));
+}
+
 namespace impl {
 
     template <typename LeftType, typename Packer>
