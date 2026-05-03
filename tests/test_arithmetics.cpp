@@ -204,27 +204,51 @@ TEMPLATE_TEST_CASE_SIG("basic operators",
     }
 
     SECTION("signed zero") {
-        OperatorStruct operator_call{};
-        SECTION("+/+") {
-            REQUIRE(std::signbit(operator_call(ValueType{}, ValueType{})) ==
-                    operator_call(quadruple{}, quadruple{}).signbit());
-        }
-        SECTION("+/-") {
-            REQUIRE(std::signbit(operator_call(ValueType{}, -ValueType{})) ==
-                    operator_call(quadruple{}, -quadruple{}).signbit());
-        }
-        SECTION("-/+") {
-            REQUIRE(std::signbit(operator_call(-ValueType{}, ValueType{})) ==
-                    operator_call(-quadruple{}, quadruple{}).signbit());
-        }
-        SECTION("-/-") {
-            // For some reason, this CAPTURE call fixes the result
-            // in Release version only std::divides and operator/ produce different signed results
-            if constexpr (std::is_same_v<OperatorStruct, std::divides<>>) {
-                CAPTURE(std::signbit((-ValueType{}) / (-ValueType{})));
+        if constexpr (!std::is_same_v<OperatorStruct, std::divides<>>) {
+            // 0/0 does not provide a meaningful result
+            OperatorStruct operator_call{};
+            SECTION("+/+") {
+                REQUIRE(std::signbit(operator_call(ValueType{}, ValueType{})) ==
+                        operator_call(quadruple{}, quadruple{}).signbit());
             }
-            REQUIRE(std::signbit(operator_call(-ValueType{}, -ValueType{})) ==
-                    operator_call(-quadruple{}, -quadruple{}).signbit());
+            SECTION("+/-") {
+                REQUIRE(std::signbit(operator_call(ValueType{}, -ValueType{})) ==
+                        operator_call(quadruple{}, -quadruple{}).signbit());
+            }
+            SECTION("-/+") {
+                REQUIRE(std::signbit(operator_call(-ValueType{}, ValueType{})) ==
+                        operator_call(-quadruple{}, quadruple{}).signbit());
+            }
+            SECTION("-/-") {
+                REQUIRE(std::signbit(operator_call(-ValueType{}, -ValueType{})) ==
+                        operator_call(-quadruple{}, -quadruple{}).signbit());
+            }
+        } else {
+            OperatorStruct operator_call{};
+            SECTION("+/+") {
+                std::feclearexcept(FE_ALL_EXCEPT);
+                REQUIRE(operator_call(quadruple{}, quadruple{}).is_NaN());
+                auto raised_excepts = currently_raised_exceptions();
+                REQUIRE(raised_excepts.at("FE_DIVBYZERO"));
+            }
+            SECTION("+/-") {
+                std::feclearexcept(FE_ALL_EXCEPT);
+                REQUIRE(operator_call(quadruple{}, -quadruple{}).is_NaN());
+                auto raised_excepts = currently_raised_exceptions();
+                REQUIRE(raised_excepts.at("FE_DIVBYZERO"));
+            }
+            SECTION("-/+") {
+                std::feclearexcept(FE_ALL_EXCEPT);
+                REQUIRE(operator_call(-quadruple{}, quadruple{}).is_NaN());
+                auto raised_excepts = currently_raised_exceptions();
+                REQUIRE(raised_excepts.at("FE_DIVBYZERO"));
+            }
+            SECTION("-/-") {
+                std::feclearexcept(FE_ALL_EXCEPT);
+                REQUIRE(operator_call(-quadruple{}, -quadruple{}).is_NaN());
+                auto raised_excepts = currently_raised_exceptions();
+                REQUIRE(raised_excepts.at("FE_DIVBYZERO"));
+            }
         }
     }
 }

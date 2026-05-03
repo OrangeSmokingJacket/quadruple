@@ -1,6 +1,7 @@
 #include "test_utils.hpp"
 #include "quadruple.hpp"
 #include <array>
+#include <cfenv>
 #include <random>
 
 namespace {
@@ -214,4 +215,12 @@ void remove_NaNs<quadruple>(std::vector<quadruple>& vector) {
             ++it;
         }
     }
+}
+
+std::unordered_map<std::string, bool> currently_raised_exceptions() {
+    return {{"FE_INVALID", static_cast<bool>(std::fetestexcept(FE_INVALID))},
+            {"FE_INEXACT", static_cast<bool>(std::fetestexcept(FE_INEXACT))},
+            {"FE_DIVBYZERO", static_cast<bool>(std::fetestexcept(FE_DIVBYZERO))},
+            {"FE_OVERFLOW", static_cast<bool>(std::fetestexcept(FE_OVERFLOW))},
+            {"FE_UNDERFLOW", static_cast<bool>(std::fetestexcept(FE_UNDERFLOW))}};
 }

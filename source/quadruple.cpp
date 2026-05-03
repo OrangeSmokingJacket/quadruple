@@ -1,5 +1,4 @@
 #include "quadruple.hpp"
-#include "ub_consistency.hpp"
 #include "utils.hpp"
 
 #include <array>
@@ -219,26 +218,27 @@ quadruple::operator __int128() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-        if (is_NaN()) {
-            return (__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000};
-        } else {
-            return __int128{0};
-        }
+        return std::numeric_limits<__int128>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size > sizeof(__int128) * 8) {
-            return 0;
+        if (result_bit_size >= bit_size_of<__int128>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
+        }
         result_mantissa.normalize(shift);
         if (signbit()) {
             return -static_cast<__int128>(std::bit_cast<unsigned __int128>(result_mantissa));
@@ -252,43 +252,31 @@ quadruple::operator unsigned __int128() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-        if (is_NaN()) {
-            return static_cast<unsigned __int128>((__int128{0x8000000000000000} << 64) + __int128{0x8000000000000000});
-        } else {
-            if (signbit()) {
-                return static_cast<unsigned __int128>((__int128{0x8000000000000000} << 64) +
-                                                      __int128{0x8000000000000000});
-            } else {
-                return (unsigned __int128){0};
-            }
-        }
+        return std::numeric_limits<unsigned __int128>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size > sizeof(unsigned __int128) * 8) {
-            if (signbit()) {
-                return ((unsigned __int128){0x8000000000000000} << 64) + (unsigned __int128){0x8000000000000000};
-            } else {
-                return 0;
-            }
+        if (result_bit_size + signbit() > bit_size_of<unsigned __int128>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
-        result_mantissa.normalize(shift);
-        if (signbit() && result_bit_size >= sizeof(uint64_t) * 8) {
-            result_mantissa.upper = std::numeric_limits<uint64_t>::max() - result_mantissa.upper + 1;
-            result_mantissa.lower = 0x8000000000000000;
-            return std::bit_cast<unsigned __int128>(result_mantissa);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
         }
+        result_mantissa.normalize(shift);
         auto res = std::bit_cast<unsigned __int128>(result_mantissa);
         if (signbit()) {
+            std::feraiseexcept(FE_INVALID);
             return (static_cast<unsigned __int128>(std::numeric_limits<uint64_t>::max()) + (unsigned __int128){1}) -
                    res;
         } else {
@@ -299,31 +287,50 @@ quadruple::operator unsigned __int128() const noexcept {
 
 #endif
 
-quadruple::operator int8_t() const noexcept { return static_cast<int8_t>(static_cast<int32_t>(*this)); }
+quadruple::operator int8_t() const noexcept {
+    auto res = static_cast<int32_t>(*this);
+    if (res > static_cast<int32_t>(std::numeric_limits<int8_t>::max()) ||
+        res < static_cast<int32_t>(std::numeric_limits<int8_t>::min())) {
+        std::feraiseexcept(FE_INVALID);
+    }
+    return static_cast<int8_t>(res);
+}
 
-quadruple::operator int16_t() const noexcept { return static_cast<int16_t>(static_cast<int32_t>(*this)); }
+quadruple::operator int16_t() const noexcept {
+    auto res = static_cast<int32_t>(*this);
+    if (res > static_cast<int32_t>(std::numeric_limits<int16_t>::max()) ||
+        res < static_cast<int32_t>(std::numeric_limits<int16_t>::min())) {
+        std::feraiseexcept(FE_INVALID);
+    }
+    return static_cast<int16_t>(res);
+}
 
 quadruple::operator int32_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-        return UB_handle::to_integer_conversion::NEG_OVERFLOW<int32_t>;
+        return std::numeric_limits<int32_t>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size >= sizeof(int32_t) * 8) {
-            return UB_handle::to_integer_conversion::NEG_OVERFLOW<int32_t>;
+        if (result_bit_size >= bit_size_of<int32_t>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
+        }
         result_mantissa.normalize(shift);
         result = result_mantissa.lower;
         if (signbit()) {
@@ -338,23 +345,28 @@ quadruple::operator int64_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-        return UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>;
+        return std::numeric_limits<int64_t>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size >= sizeof(int64_t) * 8) {
-            return UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>;
+        if (result_bit_size >= bit_size_of<int64_t>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
+        }
         result_mantissa.normalize(shift);
         result = result_mantissa.lower;
         if (signbit()) {
@@ -365,34 +377,52 @@ quadruple::operator int64_t() const noexcept {
     }
 }
 
-quadruple::operator uint8_t() const noexcept { return static_cast<uint8_t>(static_cast<int32_t>(*this)); }
+quadruple::operator uint8_t() const noexcept {
+    auto res = static_cast<uint32_t>(*this);
+    if (res > static_cast<uint32_t>(std::numeric_limits<uint8_t>::max())) {
+        std::feraiseexcept(FE_INVALID);
+    }
+    return static_cast<uint8_t>(res);
+}
 
-quadruple::operator uint16_t() const noexcept { return static_cast<uint16_t>(static_cast<int32_t>(*this)); }
+quadruple::operator uint16_t() const noexcept {
+    auto res = static_cast<uint32_t>(*this);
+    if (res > static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())) {
+        std::feraiseexcept(FE_INVALID);
+    }
+    return static_cast<uint16_t>(res);
+}
 
 quadruple::operator uint32_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-        return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint32_t>;
+        return std::numeric_limits<uint32_t>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size >= sizeof(uint64_t) * 8) {
-            return UB_handle::to_integer_conversion::NaN<uint32_t>;
+        if (result_bit_size + signbit() > bit_size_of<uint32_t>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
+        }
         result_mantissa.normalize(shift);
         result = result_mantissa.lower;
         if (signbit()) {
+            std::feraiseexcept(FE_INVALID);
             return std::numeric_limits<uint32_t>::max() - static_cast<uint32_t>(result) + 1;
         } else {
             return static_cast<uint32_t>(result);
@@ -404,50 +434,32 @@ quadruple::operator uint64_t() const noexcept {
     if ((upper_ & ~sign_bit_mask & ~upper_mantissa_mask) == quadruple_exponent_max) {
         // NaN or Inf
         std::feraiseexcept(FE_INVALID);
-#if defined(NDEBUG) && defined(__OPTIMIZE__)
-        if (is_NaN()) {
-            return static_cast<uint64_t>(UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>);
-        } else {
-            if (signbit()) {
-                return static_cast<uint64_t>(UB_handle::to_integer_conversion::NEG_OVERFLOW<int64_t>);
-            } else {
-                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint64_t>;
-            }
-        }
-#else
-        if (is_NaN()) {
-            return UB_handle::to_integer_conversion::NaN<uint64_t>;
-        } else {
-            if (signbit()) {
-                return UB_handle::to_integer_conversion::NEG_OVERFLOW<uint64_t>;
-            } else {
-                return UB_handle::to_integer_conversion::POS_OVERFLOW<uint64_t>;
-            }
-        }
-#endif
+        return std::numeric_limits<uint64_t>::min();
     }
     if ((upper_ & ~upper_mantissa_mask) < quadruple_exponent_bias) {
+        std::feraiseexcept(FE_INEXACT);
         return 0;
     } else {
         uint64_t result;
         uint64_t result_bit_size = upper_ & ~sign_bit_mask & ~upper_mantissa_mask;
         if (result_bit_size < quadruple_exponent_bias) {
+            std::feraiseexcept(FE_INEXACT);
             return 0;
         }
         result_bit_size -= quadruple_exponent_bias;
         result_bit_size = (result_bit_size >> (sizeof(uint64_t) - sizeof(uint16_t)) * 8) + 1;
-        if (result_bit_size + static_cast<uint64_t>(signbit()) > sizeof(uint64_t) * 8) {
-            if (signbit()) {
-                return 0x8000000000000000;
-            } else {
-                return 0;
-            }
+        if (result_bit_size + static_cast<uint64_t>(signbit()) > bit_size_of<uint64_t>()) {
+            std::feraiseexcept(FE_INVALID);
         }
         mantissa_calc result_mantissa = convert_mantissa();
         auto shift = static_cast<int>(sizeof(mantissa_calc) * 8 - quadruple_exponent_size - result_bit_size);
+        if (shift > static_cast<int>(bit_size_of<mantissa_calc>()) - result_mantissa.least_significant_bit_position()) {
+            std::feraiseexcept(FE_INEXACT);
+        }
         result_mantissa.normalize(shift);
         result = result_mantissa.lower;
         if (signbit()) {
+            std::feraiseexcept(FE_INVALID);
             return std::numeric_limits<uint64_t>::max() - result + 1;
         } else {
             return result;
@@ -626,55 +638,17 @@ quadruple::operator double() const noexcept {
     }
 }
 
-quadruple quadruple::operator+() const {
-    if constexpr (UB_handle::unary_signaling::PRESERVED) {
-        return *this;
-    } else {
-        if (is_signaling_NaN()) {
-            std::feraiseexcept(FE_INVALID);
-            if (signbit()) {
-                return negative_quiet_NaN();
-            } else {
-                return quiet_NaN();
-            }
-        } else {
-            return *this;
-        }
-    }
-}
+quadruple quadruple::operator+() const { return *this; }
 
-quadruple quadruple::operator-() const {
-    if constexpr (UB_handle::unary_signaling::PRESERVED) {
-        return {upper_ ^ sign_bit_mask, lower_};
-    } else {
-        if (is_signaling_NaN()) {
-            std::feraiseexcept(FE_INVALID);
-            if (signbit()) {
-                return quiet_NaN();
-            } else {
-                return negative_quiet_NaN();
-            }
-        } else {
-            return {upper_ ^ sign_bit_mask, lower_};
-        }
-    }
-}
+quadruple quadruple::operator-() const { return {upper_ ^ sign_bit_mask, lower_}; }
 
 quadruple quadruple::operator+(const quadruple& rhs) const {
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         std::feraiseexcept(FE_INVALID);
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
+        return quiet_NaN();
     }
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
+        return quiet_NaN();
     }
 
     auto this_sign = signbit();
@@ -755,18 +729,10 @@ quadruple quadruple::operator+(const quadruple& rhs) const {
 quadruple quadruple::operator-(const quadruple& rhs) const {
     if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         std::feraiseexcept(FE_INVALID);
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
+        return quiet_NaN();
     }
     if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
+        return quiet_NaN();
     }
 
     auto this_sign = signbit();
@@ -856,24 +822,12 @@ quadruple quadruple::operator-(const quadruple& rhs) const {
 quadruple quadruple::operator*(const quadruple& rhs) const {
     bool result_sign = signbit() != rhs.signbit();
 
-    if (is_signaling_NaN()) {
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         std::feraiseexcept(FE_INVALID);
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
-    } else if (rhs.is_signaling_NaN()) {
-        std::feraiseexcept(FE_INVALID);
-        if (rhs.signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
-    } else if (is_quiet_NaN()) {
-        return *this;
-    } else if (rhs.is_quiet_NaN()) {
-        return rhs;
+        return quiet_NaN();
+    }
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+        return quiet_NaN();
     }
 
     // handle infinity
@@ -947,24 +901,16 @@ quadruple quadruple::operator*(const quadruple& rhs) const {
 quadruple quadruple::operator/(const quadruple& rhs) const {
     bool result_sign = signbit() != rhs.signbit();
 
-    if (is_signaling_NaN()) {
-        std::feraiseexcept(FE_INVALID);
-        if (signbit()) {
-            return negative_quiet_NaN();
-        } else {
-            return quiet_NaN();
-        }
-    } else if (rhs.is_signaling_NaN()) {
+    if (is_signaling_NaN() || rhs.is_signaling_NaN()) {
         std::feraiseexcept(FE_INVALID);
         if (rhs.signbit()) {
             return negative_quiet_NaN();
         } else {
             return quiet_NaN();
         }
-    } else if (is_quiet_NaN()) {
-        return *this;
-    } else if (rhs.is_quiet_NaN()) {
-        return rhs;
+    }
+    if (is_quiet_NaN() || rhs.is_quiet_NaN()) {
+        return quiet_NaN();
     }
 
     // handle infinity
@@ -977,11 +923,8 @@ quadruple quadruple::operator/(const quadruple& rhs) const {
     }
 
     if (is_zero() && rhs.is_zero()) {
-        if constexpr (UB_handle::division::fixed_sign_bit_0_by_0) {
-            return negative_quiet_NaN();
-        } else {
-            return result_sign ? negative_quiet_NaN() : quiet_NaN();
-        }
+        std::feraiseexcept(FE_DIVBYZERO);
+        return quiet_NaN();
     }
     if (is_zero() || (rhs.upper_ & quadruple_exponent_max) == quadruple_exponent_max) {
         return result_sign ? -quadruple{} : quadruple{};
@@ -1067,9 +1010,9 @@ int quadruple::mantissa_calc::least_significant_bit_position() const noexcept {
     if (is_zero()) {
         return -1;
     } else if (lower != 0) {
-        return ::least_significant_bit_position<uint64_t>(lower);
+        return ::least_significant_bit_position<uint64_t>(lower) + static_cast<int>(sizeof(lower) * 8);
     } else {
-        return ::least_significant_bit_position<uint64_t>(upper) + static_cast<int>(sizeof(lower) * 8);
+        return ::least_significant_bit_position<uint64_t>(upper);
     }
 }
 

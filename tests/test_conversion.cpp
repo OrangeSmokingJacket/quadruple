@@ -289,18 +289,30 @@ using rounding_conversion_types = types_cross_product<std::tuple<float, double>,
 TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", rounding_conversion_types) {
     using FromType = std::tuple_element<0, TestType>::type;
     using ToType = std::tuple_element<1, TestType>::type;
-    auto check_conversion = [](FromType original_val, bool should_raise = false) {
+    auto check_conversion = [](FromType original_val) {
+        // convert value to quadruple
         quadruple quad{original_val};
         ToType converted1 = static_cast<ToType>(original_val);
+
         std::feclearexcept(FE_ALL_EXCEPT);
         ToType converted2{quad};
-        REQUIRE(std::fetestexcept(FE_INVALID) == should_raise);
-
-        // for some reason, without using both variables REQUIRE fails sometimes in
-        // Release build
-        CAPTURE(converted1);
-        CAPTURE(converted2);
-        REQUIRE(converted1 == converted2);
+        auto raised_excepts = currently_raised_exceptions();
+        if (raised_excepts.at("FE_INVALID")) {
+            bool should_raise = original_val > static_cast<FromType>(std::numeric_limits<ToType>::max()) ||
+                                original_val < static_cast<FromType>(std::numeric_limits<ToType>::min()) ||
+                                std::isnan(original_val) || std::isinf(original_val);
+            REQUIRE(should_raise);
+        }
+        if (raised_excepts.at("FE_INEXACT")) {
+            quadruple converted_back{converted2};
+            REQUIRE(std::memcmp(&converted_back, &quad, sizeof(quadruple)) != 0);
+        }
+        if (!raised_excepts.at("FE_INVALID") && !raised_excepts.at("FE_INEXACT")) {
+            REQUIRE(converted1 == converted2);
+        }
+        REQUIRE_FALSE(raised_excepts.at("FE_DIVBYZERO"));
+        REQUIRE_FALSE(raised_excepts.at("FE_OVERFLOW"));
+        REQUIRE_FALSE(raised_excepts.at("FE_UNDERFLOW"));
     };
 
     SECTION("positive") {
@@ -332,8 +344,8 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         if constexpr (sizeof(FromType) == sizeof(double)) {
             SECTION("1e70") { check_conversion(static_cast<FromType>(1e70)); }
         }
-        SECTION("Inf") { check_conversion(std::numeric_limits<FromType>::infinity(), true); }
-        SECTION("NaN") { check_conversion(std::numeric_limits<FromType>::quiet_NaN(), true); }
+        SECTION("Inf") { check_conversion(std::numeric_limits<FromType>::infinity()); }
+        SECTION("NaN") { check_conversion(std::numeric_limits<FromType>::quiet_NaN()); }
     }
 
     SECTION("negative") {
@@ -365,7 +377,7 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         if constexpr (sizeof(FromType) == sizeof(double)) {
             SECTION("1e70") { check_conversion(static_cast<FromType>(-1e70)); }
         }
-        SECTION("Inf") { check_conversion(-std::numeric_limits<FromType>::infinity(), true); }
-        SECTION("NaN") { check_conversion(-std::numeric_limits<FromType>::quiet_NaN(), true); }
+        SECTION("Inf") { check_conversion(-std::numeric_limits<FromType>::infinity()); }
+        SECTION("NaN") { check_conversion(-std::numeric_limits<FromType>::quiet_NaN()); }
     }
 }

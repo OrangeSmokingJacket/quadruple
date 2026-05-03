@@ -1,6 +1,8 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 class quadruple;
@@ -84,6 +86,8 @@ void for_each_premutation(const Container1& container1, const Container2& contai
                          container2.end(),
                          std::forward<Function>(func));
 }
+
+std::unordered_map<std::string, bool> currently_raised_exceptions();
 
 namespace impl {
 

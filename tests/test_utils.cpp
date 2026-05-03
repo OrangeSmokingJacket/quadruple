@@ -3,8 +3,6 @@
 #include <catch2/catch_all.hpp>
 #include <random>
 
-#include "ub_consistency.hpp"
-
 template <typename T>
 bool is_negative(T val) {
     return std::signbit(val);
@@ -13,68 +11,6 @@ bool is_negative(T val) {
 template <>
 bool is_negative(quadruple val) {
     return val.signbit();
-}
-
-using ub_conversion_types = types_cross_product<std::tuple<float, double>, integer_types>::type;
-
-TEMPLATE_LIST_TEST_CASE("UB consistency", "[utils]", ub_conversion_types) {
-    using FromType = std::tuple_element<0, TestType>::type;
-    using ToType = std::tuple_element<1, TestType>::type;
-    SECTION("positive") {
-        if constexpr (std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
-            // float to (u)int128 can not overflow
-            SECTION("overflow") {
-                double val = std::numeric_limits<FromType>::max();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
-            }
-        }
-        SECTION("infinity") {
-            FromType val = std::numeric_limits<FromType>::infinity();
-            ToType converted = static_cast<ToType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::POS_OVERFLOW<ToType>);
-        }
-        SECTION("NaN") {
-            SECTION("quiet") {
-                FromType val = std::numeric_limits<FromType>::quiet_NaN();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
-            }
-            SECTION("signaling") {
-                FromType val = std::numeric_limits<FromType>::signaling_NaN();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
-            }
-        }
-    }
-
-    SECTION("negative") {
-        if constexpr (std::is_same_v<double, FromType> || sizeof(ToType) <= 8) {
-            // float to (u)int128 can not overflow
-            SECTION("overflow") {
-                FromType val = -std::numeric_limits<FromType>::max();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
-            }
-        }
-        SECTION("infinity") {
-            FromType val = -std::numeric_limits<FromType>::infinity();
-            ToType converted = static_cast<ToType>(val);
-            REQUIRE(converted == UB_handle::to_integer_conversion::NEG_OVERFLOW<ToType>);
-        }
-        SECTION("NaN") {
-            SECTION("quiet") {
-                FromType val = -std::numeric_limits<FromType>::quiet_NaN();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
-            }
-            SECTION("signaling") {
-                FromType val = -std::numeric_limits<FromType>::signaling_NaN();
-                ToType converted = static_cast<ToType>(val);
-                REQUIRE(converted == UB_handle::to_integer_conversion::NaN<ToType>);
-            }
-        }
-    }
 }
 
 TEMPLATE_TEST_CASE("test utils", "[utils]", float, double, quadruple) {
