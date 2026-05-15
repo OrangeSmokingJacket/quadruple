@@ -39,6 +39,9 @@ TEMPLATE_TEST_CASE("same type conversion", "[conversion][floating]", float, doub
             SECTION("sqrt3") { check_conversion(std::numbers::sqrt3_v<TestType>); }
             SECTION("inv_sqrtpi") { check_conversion(std::numbers::inv_sqrtpi_v<TestType>); }
             SECTION("infinity") { check_conversion(std::numeric_limits<TestType>::infinity()); }
+            SECTION("max") { check_conversion(std::numeric_limits<TestType>::max()); }
+            SECTION("min") { check_conversion(std::numeric_limits<TestType>::min()); }
+            SECTION("denorm_min") { check_conversion(std::numeric_limits<TestType>::denorm_min()); }
             SECTION("qNaN") { check_conversion(std::numeric_limits<TestType>::quiet_NaN()); }
             SECTION("sNaN") { check_conversion(std::numeric_limits<TestType>::signaling_NaN()); }
         }
@@ -68,6 +71,9 @@ TEMPLATE_TEST_CASE("same type conversion", "[conversion][floating]", float, doub
             SECTION("sqrt3") { check_conversion(-std::numbers::sqrt3_v<TestType>); }
             SECTION("inv_sqrtpi") { check_conversion(-std::numbers::inv_sqrtpi_v<TestType>); }
             SECTION("infinity") { check_conversion(-std::numeric_limits<TestType>::infinity()); }
+            SECTION("max") { check_conversion(-std::numeric_limits<TestType>::max()); }
+            SECTION("min") { check_conversion(-std::numeric_limits<TestType>::min()); }
+            SECTION("denorm_min") { check_conversion(-std::numeric_limits<TestType>::denorm_min()); }
             SECTION("qNaN") { check_conversion(-std::numeric_limits<TestType>::quiet_NaN()); }
             SECTION("sNaN") { check_conversion(negative_sNaN<TestType>()); }
         }
@@ -144,6 +150,9 @@ TEMPLATE_TEST_CASE_SIG("different type conversion",
             SECTION("sqrt3") { check_conversion(std::numbers::sqrt3_v<FromType>); }
             SECTION("inv_sqrt(pi)") { check_conversion(std::numbers::inv_sqrtpi_v<FromType>); }
             SECTION("infinity") { check_conversion(std::numeric_limits<FromType>::infinity()); }
+            SECTION("max") { check_conversion(std::numeric_limits<FromType>::max()); }
+            SECTION("min") { check_conversion(std::numeric_limits<FromType>::min()); }
+            SECTION("denorm_min") { check_conversion(std::numeric_limits<FromType>::denorm_min()); }
             SECTION("qNaN") { check_NaN_conversion(std::numeric_limits<FromType>::quiet_NaN()); }
             SECTION("sNaN") { check_NaN_conversion(std::numeric_limits<FromType>::signaling_NaN()); }
         }
@@ -173,6 +182,9 @@ TEMPLATE_TEST_CASE_SIG("different type conversion",
             SECTION("sqrt3") { check_conversion(-std::numbers::sqrt3_v<FromType>); }
             SECTION("inv_sqrt(pi)") { check_conversion(-std::numbers::inv_sqrtpi_v<FromType>); }
             SECTION("infinity") { check_conversion(-std::numeric_limits<FromType>::infinity()); }
+            SECTION("max") { check_conversion(-std::numeric_limits<FromType>::max()); }
+            SECTION("min") { check_conversion(-std::numeric_limits<FromType>::min()); }
+            SECTION("denorm_min") { check_conversion(-std::numeric_limits<FromType>::denorm_min()); }
             SECTION("qNaN") { check_NaN_conversion(-std::numeric_limits<FromType>::quiet_NaN()); }
             SECTION("sNaN") { check_NaN_conversion(negative_sNaN<FromType>()); }
         }
@@ -379,5 +391,34 @@ TEMPLATE_LIST_TEST_CASE("rounding conversion", "[conversion][integers]", roundin
         }
         SECTION("Inf") { check_conversion(-std::numeric_limits<FromType>::infinity()); }
         SECTION("NaN") { check_conversion(-std::numeric_limits<FromType>::quiet_NaN()); }
+    }
+}
+
+TEMPLATE_TEST_CASE("floating over/underflow", "[conversion][float]", float, double) {
+    // -1074 is min power of 2 that could be represented in double
+    auto quad_underflow = quadruple::power_of_2(-1075);
+    // 1023 is max power of 2 that could be represented in double
+    auto quad_overflow = quadruple::power_of_2(1024);
+
+    auto check_underflow = [](quadruple val) {
+        std::feclearexcept(FE_ALL_EXCEPT);
+        TestType converted = static_cast<TestType>(val);
+        REQUIRE(static_cast<bool>(std::fetestexcept(FE_UNDERFLOW)));
+        REQUIRE(std::fpclassify(converted) == FP_ZERO);
+    };
+    auto check_overflow = [](quadruple val) {
+        std::feclearexcept(FE_ALL_EXCEPT);
+        TestType converted = static_cast<TestType>(val);
+        REQUIRE(static_cast<bool>(std::fetestexcept(FE_OVERFLOW)));
+        REQUIRE(std::isinf(converted));
+    };
+
+    SECTION("positive") {
+        check_underflow(quad_underflow);
+        check_overflow(quad_overflow);
+    }
+    SECTION("negative") {
+        check_underflow(-quad_underflow);
+        check_overflow(-quad_overflow);
     }
 }

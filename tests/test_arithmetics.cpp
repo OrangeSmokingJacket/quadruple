@@ -131,6 +131,10 @@ TEMPLATE_TEST_CASE_SIG("basic operators",
                 REQUIRE((equals_res || equals_res_next));
             } else {
                 // compare bits
+                if (std::memcmp(&result, &converted_test_result, sizeof(ValueType)) != 0) {
+                    auto converted_test_result_again = static_cast<ValueType>(test_result);
+                    REQUIRE(std::memcmp(&result, &converted_test_result_again, sizeof(ValueType)) == 0);
+                }
                 REQUIRE(std::memcmp(&result, &converted_test_result, sizeof(ValueType)) == 0);
             }
         }

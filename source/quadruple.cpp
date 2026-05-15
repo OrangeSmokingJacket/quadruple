@@ -485,14 +485,12 @@ quadruple::operator float() const noexcept {
 
     uint32_t float_bits{0};
 
-    // create mantissa
     uint64_t exponent_val = upper_ & ~upper_mantissa_mask;
     uint64_t mantissa_val = upper_ & upper_mantissa_mask;
     mantissa_val >>= (sizeof(uint64_t) - sizeof(uint16_t)) * 8 - float_mantissa_size;
 
-    // create exponent
-    bool forced_round = false;
-    bool requires_round = false;
+    // float_bits filled with exponent, then combined with mantissa
+    bool requires_rounding = false;
     if ((exponent_val & quadruple_exponent_max) == quadruple_exponent_max) {
         float_bits = float_exponent_max_mask;
         if (signbit()) {
@@ -501,31 +499,26 @@ quadruple::operator float() const noexcept {
     } else {
         auto numeric_exponent = exponent_to_uint16(exponent_val);
         if (numeric_exponent >= exponent_values::max_float_exponent) {
+            std::feraiseexcept(FE_OVERFLOW);
             return signbit() ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
         } else if (numeric_exponent <= exponent_values::min_float_exponent) {
+            // result will be subnormal, so we have to bring back implied bit
+            mantissa_val |= single_bit_mask<uint64_t, bit_size_of<uint64_t>() - float_mantissa_size - 1>();
+            std::feraiseexcept(FE_UNDERFLOW);
             if (signbit()) {
                 float_bits |= single_bit_mask<uint32_t, 0>();
             }
-            forced_round = true;
             size_t adj = exponent_values::min_float_exponent - numeric_exponent + 1;
-            if (adj == float_mantissa_size + 1) {
-                mantissa_val = 1;
-            } else {
-                if (adj > float_mantissa_size + 1) {
-                    mantissa_val = 0;
-                } else {
-                    if (adj > 0) {
-                        mantissa_val >>= adj - 1;
-                        requires_round =
-                            (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
-                        mantissa_val >>= 1;
-                    }
-                }
-                if (adj <= float_mantissa_size) {
-                    mantissa_val |= uint64_t{1} << (float_mantissa_size - adj);
-                }
+            if (adj > float_mantissa_size + 1) {
+                mantissa_val = 0;
+            } else if (adj > 0) {
+                uint64_t mask = single_bit_mask<uint64_t, 63>() << (adj - 1);
+                requires_rounding = (mantissa_val & mask) != 0 && mantissa_val != mask;
+                mantissa_val >>= adj;
             }
         } else {
+            requires_rounding =
+                (upper_ & single_bit_mask<uint64_t, float_mantissa_size + quadruple_exponent_size + 1>()) != 0;
             // shift left by extra 2 bits to remove signs
             exponent_val <<= quadruple_exponent_size - float_exponent_size + 2;
             exponent_val >>= 2;
@@ -540,9 +533,7 @@ quadruple::operator float() const noexcept {
     float_bits |= static_cast<uint32_t>(mantissa_val);
 
     auto result = std::bit_cast<float>(float_bits);
-    if ((forced_round && requires_round) ||
-        (!forced_round && is_bit_set<uint64_t, quadruple_exponent_size + float_mantissa_size + 1>(upper_) &&
-         (float_bits | single_bit_mask<uint32_t, 0>()) != single_bit_mask<uint32_t, 0>())) {
+    if (requires_rounding) {
         if (is_bit_set<decltype(float_bits), 0>(float_bits)) {
             return std::nextafter(result, -std::numeric_limits<float>::infinity());
         } else {
@@ -571,15 +562,13 @@ quadruple::operator double() const noexcept {
 
     uint64_t double_bits{0};
 
-    // create mantissa
     uint64_t exponent_val = upper_ & ~upper_mantissa_mask;
     uint64_t mantissa_val = upper_ & upper_mantissa_mask;
     mantissa_val <<= quadruple_exponent_size - double_exponent_size;
     mantissa_val |= lower_ >> (sizeof(lower_) * 8 - (quadruple_exponent_size - double_exponent_size));
 
-    // create exponent
-    bool forced_round = false;
-    bool requires_round = false;
+    // double_bits filled with exponent, then combined with mantissa
+    bool requires_rounding = false;
     if ((exponent_val & quadruple_exponent_max) == quadruple_exponent_max) {
         double_bits = double_exponent_max_mask;
         if (signbit()) {
@@ -588,31 +577,28 @@ quadruple::operator double() const noexcept {
     } else {
         auto numeric_exponent = exponent_to_uint16(exponent_val);
         if (numeric_exponent >= exponent_values::max_double_exponent) {
+            std::feraiseexcept(FE_OVERFLOW);
             return signbit() ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
         } else if (numeric_exponent <= exponent_values::min_double_exponent) {
+            // result will be subnormal, so we have to bring back implied bit
+            mantissa_val |= single_bit_mask<uint64_t, bit_size_of<uint64_t>() - double_mantissa_size - 1>();
+            std::feraiseexcept(FE_UNDERFLOW);
             if (signbit()) {
                 double_bits |= sign_bit_mask;
             }
-            forced_round = true;
             size_t adj = exponent_values::min_double_exponent - numeric_exponent + 1;
-            if (adj == double_mantissa_size + 1) {
-                mantissa_val = 1;
-            } else {
-                if (adj > double_mantissa_size + 1) {
-                    mantissa_val = 0;
-                } else {
-                    if (adj > 0) {
-                        mantissa_val >>= adj - 1;
-                        requires_round =
-                            (mantissa_val & single_bit_mask<uint64_t, 63>()) == single_bit_mask<uint64_t, 63>();
-                        mantissa_val >>= 1;
-                    }
-                }
-                if (adj <= double_mantissa_size) {
-                    mantissa_val |= uint64_t{1} << (double_mantissa_size - adj);
-                }
+            if (adj > double_mantissa_size + 1) {
+                mantissa_val = 0;
+            } else if (adj > 0) {
+                uint64_t mask = single_bit_mask<uint64_t, 63>() << (adj - 1);
+                requires_rounding = (mantissa_val & mask) != 0 && mantissa_val != mask;
+                mantissa_val >>= adj;
             }
         } else {
+            requires_rounding =
+                (lower_ &
+                 single_bit_mask<uint64_t,
+                                 double_mantissa_size + quadruple_exponent_size + 1 - bit_size_of<uint64_t>()>()) != 0;
             // shift left by extra 2 bits to remove signs
             exponent_val <<= quadruple_exponent_size - double_exponent_size + 2;
             exponent_val >>= 2;
@@ -625,9 +611,7 @@ quadruple::operator double() const noexcept {
     double_bits |= mantissa_val;
 
     auto result = std::bit_cast<double>(double_bits);
-    if ((forced_round && requires_round) ||
-        (!forced_round && is_bit_set<decltype(lower_), quadruple_exponent_size - double_exponent_size>(lower_) &&
-         (double_bits | sign_bit_mask) != sign_bit_mask)) {
+    if (requires_rounding) {
         if (is_bit_set<decltype(double_bits), 0>(double_bits)) {
             return std::nextafter(result, -std::numeric_limits<double>::infinity());
         } else {
@@ -857,6 +841,7 @@ quadruple quadruple::operator*(const quadruple& rhs) const {
     auto rhs_exp = exponent_to_uint16(rhs.upper_);
     int adjusted_res_exp = lhs_exp + rhs_exp - exponent_values::quadruple_exponent_bias;
     if (adjusted_res_exp > static_cast<int>(exponent_values::quadruple_exponent_max)) {
+        std::feraiseexcept(FE_OVERFLOW);
         return result_sign ? negative_infinity() : infinity();
     }
 
@@ -959,6 +944,7 @@ quadruple quadruple::operator/(const quadruple& rhs) const {
     subnormal_shift = std::max(quadruple_min_normal_representable_pow2 - adjusted_res_exp, 0) + subnormal_shift;
     uint64_t res_exp_shifted = 0;
     if (subnormal_shift > 0) {
+        std::feraiseexcept(FE_UNDERFLOW);
         res_mantissa.normalize(subnormal_shift);
     } else {
         // remove implied bit
