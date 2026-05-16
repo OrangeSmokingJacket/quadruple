@@ -2,7 +2,7 @@ from conan import tools, ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.build import check_min_cppstd
 from conan.errors import ConanInvalidConfiguration
-class OtterbrixConan(ConanFile):
+class QuadrupleConan(ConanFile):
     name = "quadruple"
     version = "0.1.0"
     settings = "os", "compiler", "build_type", "arch"
