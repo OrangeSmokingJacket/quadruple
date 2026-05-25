@@ -15,8 +15,15 @@ jobs:
         extensions: ["ON", "OFF"]
         sanitizers: ["ON", "OFF"]
 
+    name: |-
+      ${{matrix.build_type}} build on Ubuntu-22;
+      C++${{matrix.cxx_standard}};
+      Implicit casts ${{matrix.implicit_casts}};
+      Extensions ${{matrix.extensions}};
+      Sanitizers ${{matrix.sanitizers}}
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install system dependencies
       run: |
