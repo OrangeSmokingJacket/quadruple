@@ -14,14 +14,8 @@ class QuadrupleConan(ConanFile):
         if self.settings.get_safe("compiler.cppstd") is None:
             self.settings.cppstd = 20
 
-    def validate(self):
-        pass
-
     def layout(self):
         cmake_layout(self)
-
-    def imports(self):
-        self.copy("*.so*", dst="build_tools", src="lib")
 
     def generate(self):
         tc = CMakeToolchain(self)
